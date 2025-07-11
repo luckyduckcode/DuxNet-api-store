@@ -70,6 +70,21 @@
             </div>
 
             <div class="panel">
+                <h2>AOI Key Management</h2>
+                <div class="form-group">
+                    <label for="aoiServiceId">Service ID</label>
+                    <input type="text" id="aoiServiceId" placeholder="Enter service ID">
+                </div>
+                <div class="form-group">
+                    <label for="aoiKeyData">AOI Key Data</label>
+                    <input type="text" id="aoiKeyData" placeholder="Enter AOI key data">
+                </div>
+                <button class="btn btn-primary" onclick="registerAOIKey()">Register AOI Key</button>
+                <button class="btn btn-secondary" onclick="getAOIKey()">Get AOI Key</button>
+                <div id="aoiKeyResult" class="results-container"></div>
+            </div>
+
+            <div class="panel">
                 <h2>Service Discovery</h2>
                 <div class="form-group">
                     <label for="searchQuery">Search Services</label>

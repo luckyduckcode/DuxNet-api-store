@@ -4,7 +4,7 @@ use ed25519_dalek::{SigningKey, VerifyingKey, Signature, Signer, Verifier};
 use rand::rngs::OsRng;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::{debug, info};
+use tracing::info;
 use base64::{Engine as _, engine::general_purpose};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]

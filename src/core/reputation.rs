@@ -3,7 +3,7 @@ use anyhow::Result;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info};
+use tracing::debug;
 
 pub struct ReputationSystem {
     pub attestations: Arc<RwLock<HashMap<String, Vec<ReputationAttestation>>>>,

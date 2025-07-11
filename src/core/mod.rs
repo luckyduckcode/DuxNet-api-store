@@ -17,7 +17,6 @@ use reputation::ReputationSystem;
 use escrow::EscrowManager;
 use tasks::TaskEngine;
 use crate::network::P2PNetwork;
-use crate::wallet::Wallet;
 
 pub struct DuxNetNode {
     pub node_id: NodeId,
@@ -193,5 +192,21 @@ impl DuxNetNode {
     pub async fn add_reputation_attestation(&self, attestation: ReputationAttestation) -> Result<()> {
         self.reputation_system.add_attestation(attestation).await?;
         Ok(())
+    }
+
+    pub async fn register_aoi_key_for_service(&self, service_id: ServiceId, key_data: String) -> Result<()> {
+        let aoi_key = AOIKey {
+            service_id,
+            key_data,
+            created_at: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+        };
+        self.dht.store_aoi_key(&aoi_key).await
+    }
+
+    pub async fn get_aoi_key_for_service(&self, service_id: ServiceId) -> Option<AOIKey> {
+        self.dht.get_aoi_key(&service_id).await
     }
 } 

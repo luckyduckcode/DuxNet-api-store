@@ -1,5 +1,4 @@
 use crate::core::data_structures::*;
-use crate::wallet::{Wallet, SendRequest, Currency};
 use axum::{
     extract::State,
     http::{Method, StatusCode},
@@ -14,6 +13,7 @@ use tower_http::services::ServeDir;
 use tracing::{error, info};
 use axum::response::Html;
 use base64::Engine;
+use crate::core::data_structures::{RegisterAOIKeyRequest, RegisterAOIKeyResponse, GetAOIKeyRequest, GetAOIKeyResponse};
 
 #[derive(Clone)]
 pub struct ApiState {
@@ -50,6 +50,8 @@ pub async fn start_api_server(port: u16) -> Result<(), Box<dyn std::error::Error
         .route("/api/wallet/backup", get(backup_wallet))
         .route("/api/wallet/restore", post(restore_wallet))
         .route("/api/wallet/keys", get(get_wallet_keys))
+        .route("/api/services/aoi/register", post(register_aoi_key))
+        .route("/api/services/aoi/get", post(get_aoi_key))
         .route("/", get(serve_index))
         .route("/index.html", get(serve_index))
         .nest_service("/static", ServeDir::new("static"))
@@ -450,5 +452,43 @@ async fn get_wallet_keys(State(state): State<ApiState>) -> impl IntoResponse {
                 "message": format!("Failed to get wallet keys: {}", e)
             }))
         }
+    }
+} 
+
+async fn register_aoi_key(
+    State(state): State<ApiState>,
+    axum::Json(request): axum::Json<RegisterAOIKeyRequest>,
+) -> impl IntoResponse {
+    let node = &state.node;
+    let service_id = crate::core::data_structures::ServiceId(request.service_id);
+    match node.register_aoi_key_for_service(service_id, request.key_data).await {
+        Ok(_) => axum::Json(RegisterAOIKeyResponse {
+            success: true,
+            message: "AOI key registered successfully".to_string(),
+        }),
+        Err(e) => axum::Json(RegisterAOIKeyResponse {
+            success: false,
+            message: format!("Failed to register AOI key: {}", e),
+        }),
+    }
+}
+
+async fn get_aoi_key(
+    State(state): State<ApiState>,
+    axum::Json(request): axum::Json<GetAOIKeyRequest>,
+) -> impl IntoResponse {
+    let node = &state.node;
+    let service_id = crate::core::data_structures::ServiceId(request.service_id);
+    match node.get_aoi_key_for_service(service_id).await {
+        Some(aoi_key) => axum::Json(GetAOIKeyResponse {
+            key_data: Some(aoi_key.key_data),
+            success: true,
+            message: "AOI key found".to_string(),
+        }),
+        None => axum::Json(GetAOIKeyResponse {
+            key_data: None,
+            success: false,
+            message: "AOI key not found".to_string(),
+        }),
     }
 } 

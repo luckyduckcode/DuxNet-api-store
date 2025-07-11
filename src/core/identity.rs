@@ -1,6 +1,6 @@
 use crate::core::data_structures::*;
 use anyhow::Result;
-use ed25519_dalek::{SigningKey, VerifyingKey, Signature, Signer, Verifier};
+use ed25519_dalek::{SigningKey, Signer, Verifier};
 use rand::rngs::OsRng;
 use tracing::{debug, info};
 

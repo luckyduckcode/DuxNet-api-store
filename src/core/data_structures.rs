@@ -181,6 +181,30 @@ pub struct CreateEscrowResponse {
     pub message: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RegisterAOIKeyRequest {
+    pub service_id: String,
+    pub key_data: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RegisterAOIKeyResponse {
+    pub success: bool,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GetAOIKeyRequest {
+    pub service_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GetAOIKeyResponse {
+    pub key_data: Option<String>,
+    pub success: bool,
+    pub message: String,
+}
+
 // Node status
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeStatus {
@@ -191,6 +215,13 @@ pub struct NodeStatus {
     pub services_count: usize,
     pub reputation_score: f64,
     pub peers_count: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AOIKey {
+    pub service_id: ServiceId,
+    pub key_data: String, // or Vec<u8> if binary
+    pub created_at: u64,
 }
 
 // Utility functions

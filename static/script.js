@@ -654,3 +654,56 @@ async function restoreWallet() {
         showNotification('Failed to restore wallet', 'error');
     }
 } 
+
+async function registerAOIKey() {
+    const serviceId = document.getElementById('aoiServiceId').value;
+    const keyData = document.getElementById('aoiKeyData').value;
+    if (!serviceId || !keyData) {
+        showNotification('Please enter both Service ID and AOI Key Data', 'error');
+        return;
+    }
+    try {
+        const response = await fetch(`${API_BASE}/services/aoi/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ service_id: serviceId, key_data: keyData })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showNotification('AOI key registered successfully!', 'success');
+            document.getElementById('aoiKeyResult').innerHTML = '<p>AOI key registered for service.</p>';
+        } else {
+            showNotification(result.message, 'error');
+            document.getElementById('aoiKeyResult').innerHTML = `<p style='color:red;'>${result.message}</p>`;
+        }
+    } catch (error) {
+        showNotification('Failed to register AOI key', 'error');
+        document.getElementById('aoiKeyResult').innerHTML = `<p style='color:red;'>Failed to register AOI key</p>`;
+    }
+}
+
+async function getAOIKey() {
+    const serviceId = document.getElementById('aoiServiceId').value;
+    if (!serviceId) {
+        showNotification('Please enter Service ID', 'error');
+        return;
+    }
+    try {
+        const response = await fetch(`${API_BASE}/services/aoi/get`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ service_id: serviceId })
+        });
+        const result = await response.json();
+        if (result.success && result.key_data) {
+            showNotification('AOI key retrieved successfully!', 'success');
+            document.getElementById('aoiKeyResult').innerHTML = `<p><strong>AOI Key:</strong> ${result.key_data}</p>`;
+        } else {
+            showNotification(result.message, 'error');
+            document.getElementById('aoiKeyResult').innerHTML = `<p style='color:red;'>${result.message}</p>`;
+        }
+    } catch (error) {
+        showNotification('Failed to retrieve AOI key', 'error');
+        document.getElementById('aoiKeyResult').innerHTML = `<p style='color:red;'>Failed to retrieve AOI key</p>`;
+    }
+} 

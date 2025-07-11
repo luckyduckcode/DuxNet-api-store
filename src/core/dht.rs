@@ -3,7 +3,7 @@ use anyhow::Result;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info};
+use tracing::debug;
 
 #[derive(Debug, Clone)]
 pub struct DHTEntry {
@@ -121,6 +121,21 @@ impl DHT {
 
     pub async fn get_escrow_contract(&self, escrow_id: &str) -> Option<EscrowContract> {
         let key = format!("escrow:{}", escrow_id);
+        if let Some(value) = self.get(&key).await {
+            serde_json::from_slice(&value).ok()
+        } else {
+            None
+        }
+    }
+
+    pub async fn store_aoi_key(&self, aoi_key: &AOIKey) -> Result<()> {
+        let key = format!("aoi:{}", aoi_key.service_id.0);
+        let value = serde_json::to_vec(aoi_key)?;
+        self.store(key, value, 3600).await // 1 hour TTL
+    }
+
+    pub async fn get_aoi_key(&self, service_id: &ServiceId) -> Option<AOIKey> {
+        let key = format!("aoi:{}", service_id.0);
         if let Some(value) = self.get(&key).await {
             serde_json::from_slice(&value).ok()
         } else {
