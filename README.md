@@ -1,141 +1,103 @@
 # DuxNet - Decentralized P2P Platform
 
-A high-performance, decentralized peer-to-peer platform for service discovery, task processing, and secure payments without smart contracts.
+A powerful, decentralized peer-to-peer platform built with Rust, featuring a Tauri desktop application, P2P networking, digital identity management, and cryptocurrency wallet functionality.
 
-## Features
+## 🚀 Features
 
-- **Decentralized Service Registry**: Distributed Hash Table (DHT) for service discovery
-- **P2P Network**: Pure peer-to-peer communication using libp2p
-- **Decentralized Identity**: Self-sovereign identities using DIDs
-- **Reputation System**: Trust-based scoring with peer attestations
-- **Escrow System**: Multi-signature escrow for secure payments
-- **Task Processing**: Distributed task execution and verification
-- **Modern Web UI**: Beautiful, responsive interface
+### Core Platform
+- **Decentralized P2P Network**: Peer-to-peer communication without central servers
+- **Digital Identity Management**: DID-based identity system with Ed25519 cryptography
+- **Reputation System**: Trust-based reputation scoring and attestations
+- **Escrow Contracts**: Secure multi-signature escrow system
+- **Task Engine**: Distributed task processing and execution
 
-## Architecture
+### Wallet & Cryptocurrency
+- **Multi-Currency Support**: Native DUX tokens and multi-signature wallets
+- **Transaction Management**: Secure transaction creation, signing, and verification
+- **Key Management**: Private key import/export with base64 encoding
+- **Balance Tracking**: Real-time balance monitoring across currencies
 
-### Core Components
+### Desktop Application
+- **Tauri Framework**: Cross-platform desktop app with web technologies
+- **Modern UI**: Beautiful, responsive user interface
+- **Native Performance**: Rust backend with web frontend
 
-1. **DHT (Distributed Hash Table)**: Service discovery and metadata storage
-2. **P2P Network**: Node communication using libp2p
-3. **DID System**: Decentralized identity management
-4. **Reputation System**: Trust scoring and attestations
-5. **Escrow Manager**: Multi-signature payment escrow
-6. **Task Engine**: Distributed task processing
-7. **Web API**: RESTful API for frontend integration
+### API & Networking
+- **RESTful API**: Comprehensive HTTP API on port 8081
+- **P2P Node**: Network node running on port 8080
+- **Web Interface**: Accessible at http://localhost:8081
 
-### Technology Stack
+## 🛠️ Technology Stack
 
 - **Backend**: Rust with Tokio async runtime
-- **P2P Networking**: libp2p (Kademlia DHT, Floodsub, mDNS)
-- **Web Framework**: Axum
-- **Frontend**: HTML5, CSS3, JavaScript
-- **Cryptography**: ed25519-dalek for signatures
-- **Serialization**: Serde JSON
+- **Frontend**: Tauri (Web technologies + Rust)
+- **Cryptography**: Ed25519 for digital signatures
+- **Networking**: Custom P2P protocol
+- **Database**: In-memory storage with persistence
+- **API**: Axum web framework
 
-## Quick Start
+## 📋 Prerequisites
 
-### Prerequisites
+- **Rust**: Latest stable version (1.70+)
+- **Node.js**: Version 16+ (for Tauri development)
+- **Git**: For version control
+- **Windows**: Visual Studio Build Tools (for Windows builds)
 
-- Rust 1.70+ and Cargo
-- Git
+## 🚀 Quick Start
 
-### Installation
-
-1. Clone the repository:
+### 1. Clone the Repository
 ```bash
-git clone <repository-url>
-cd DuxNet-APIstore
+git clone <your-new-repo-url>
+cd duxnet-platform
 ```
 
-2. Build the project:
+### 2. Build and Run
 ```bash
+# Build the application
 cargo build --release
-```
 
-3. Run the application:
-```bash
+# Run the application
 cargo run --release
 ```
 
-The application will start:
-- P2P node on port 8080
-- Web API on port 8081
-- Web interface at http://localhost:8081
+### 3. Access the Platform
+- **Web Interface**: http://localhost:8081
+- **API Documentation**: http://localhost:8081/api
+- **P2P Node**: Port 8080
 
-### Usage
+## 📦 Installation
 
-1. **Register a Service**:
-   - Navigate to the web interface
-   - Fill in service details (name, description, price)
-   - Click "Register Service"
+### Windows
+1. Install Rust: https://rustup.rs/
+2. Install Visual Studio Build Tools
+3. Clone and build the project
 
-2. **Discover Services**:
-   - Use the search functionality to find available services
-   - View service details and provider reputation
+### Linux/macOS
+1. Install Rust: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+2. Install system dependencies
+3. Clone and build the project
 
-3. **Submit Tasks**:
-   - Enter service ID and task payload
-   - Set resource requirements (CPU, memory, timeout)
-   - Submit for processing
-
-4. **Create Escrow**:
-   - Set up secure payment escrow for services
-   - Multi-signature protection for funds
-
-## API Endpoints
-
-### Node Status
-- `GET /api/status` - Get node status and information
-
-### Services
-- `POST /api/services/register` - Register a new service
-- `POST /api/services/search` - Search for services
-
-### Tasks
-- `POST /api/tasks/submit` - Submit a task for processing
-
-### Escrow
-- `POST /api/escrow/create` - Create a new escrow contract
-
-### Reputation
-- `GET /api/reputation/:did` - Get reputation score for a DID
-
-### Statistics
-- `GET /api/stats` - Get comprehensive network statistics
-
-## Development
+## 🔧 Development
 
 ### Project Structure
-
 ```
 src/
-├── main.rs              # Application entry point
-├── core/                # Core business logic
-│   ├── mod.rs          # Core module
-│   ├── data_structures.rs # Data structures
-│   ├── dht.rs          # Distributed Hash Table
-│   ├── identity.rs     # DID system
-│   ├── reputation.rs   # Reputation system
-│   ├── escrow.rs       # Escrow management
-│   └── tasks.rs        # Task processing
-├── network/            # P2P networking
-│   └── mod.rs          # libp2p integration
-├── api/                # Web API
-│   └── mod.rs          # Axum routes
-├── wallet/             # Wallet functionality
-│   └── mod.rs          # Crypto wallet
-└── frontend/           # Frontend integration
-    └── mod.rs          # Static file serving
+├── core/           # Core platform functionality
+│   ├── identity.rs # Digital identity management
+│   ├── dht.rs      # Distributed hash table
+│   ├── reputation.rs # Reputation system
+│   ├── escrow.rs   # Escrow contracts
+│   └── tasks.rs    # Task engine
+├── wallet/         # Cryptocurrency wallet
+├── network/        # P2P networking
+├── api/           # REST API endpoints
+└── frontend/      # Web interface
 
-static/                 # Frontend assets
-├── index.html          # Main HTML file
-├── style.css           # CSS styles
-└── script.js           # JavaScript functionality
+src-tauri/         # Tauri desktop app
+static/            # Static web assets
 ```
 
 ### Building for Development
-
 ```bash
 # Development build
 cargo build
@@ -143,94 +105,99 @@ cargo build
 # Run with logging
 RUST_LOG=debug cargo run
 
-# Run tests
-cargo test
-
-# Check formatting
-cargo fmt
-
-# Lint code
-cargo clippy
+# Tauri development
+npm run dev
 ```
 
-### Adding New Features
+### Building for Production
+```bash
+# Release build
+cargo build --release
 
-1. **New Service Type**: Extend `ServiceMetadata` in `data_structures.rs`
-2. **New Task Type**: Add to `Task` enum and implement in `tasks.rs`
-3. **New API Endpoint**: Add route in `api/mod.rs`
-4. **Frontend Feature**: Update HTML/CSS/JS in `static/` directory
+# Tauri production build
+npm run build
+```
 
-## Configuration
+## 🔌 API Endpoints
 
-### Environment Variables
+### Identity Management
+- `POST /api/identity/create` - Create new DID
+- `GET /api/identity/{did}` - Get identity info
+- `POST /api/identity/attest` - Create reputation attestation
 
-- `RUST_LOG`: Logging level (debug, info, warn, error)
-- `P2P_PORT`: P2P network port (default: 8080)
-- `API_PORT`: Web API port (default: 8081)
+### Wallet Operations
+- `GET /api/wallet/balance` - Get wallet balance
+- `POST /api/wallet/send` - Send transaction
+- `GET /api/wallet/transactions` - Get transaction history
 
-### Network Configuration
+### P2P Network
+- `GET /api/network/peers` - List connected peers
+- `POST /api/network/connect` - Connect to peer
+- `GET /api/network/status` - Network status
 
-The P2P network supports:
-- TCP transport with Noise encryption
-- Kademlia DHT for service discovery
-- Floodsub for pub/sub messaging
-- mDNS for local peer discovery
+### Escrow Contracts
+- `POST /api/escrow/create` - Create escrow contract
+- `POST /api/escrow/sign` - Sign escrow contract
+- `GET /api/escrow/{id}` - Get escrow details
 
-## Security
+## 🔐 Security Features
 
-- **Cryptographic Signatures**: All messages signed with ed25519
-- **DID Authentication**: Self-sovereign identity verification
-- **Multi-signature Escrow**: Secure payment protection
-- **Reputation System**: Sybil attack resistance
-- **P2P Encryption**: End-to-end encrypted communication
+- **Ed25519 Cryptography**: State-of-the-art digital signatures
+- **DID-based Identity**: Decentralized identifiers for users
+- **Multi-signature Wallets**: Enhanced security for transactions
+- **Reputation System**: Trust-based peer verification
+- **Escrow Contracts**: Secure multi-party agreements
 
-## Performance
+## 🌐 P2P Network
 
-- **Async Runtime**: Tokio for high-performance async operations
-- **Memory Safety**: Rust's ownership system prevents memory issues
-- **Concurrent Processing**: Multi-threaded task execution
-- **Efficient DHT**: O(log n) lookup complexity
+The DuxNet platform operates on a decentralized P2P network where:
+- Nodes communicate directly without central servers
+- Data is distributed across the network
+- Reputation ensures trust between peers
+- Escrow contracts provide secure transactions
 
-## Contributing
+## 📊 Monitoring
+
+### Logs
+The application provides detailed logging:
+- Identity creation and management
+- Network connections and peer discovery
+- Transaction processing
+- API requests and responses
+
+### Metrics
+- Active peer connections
+- Transaction volume
+- Network latency
+- System performance
+
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests
+4. Add tests if applicable
 5. Submit a pull request
 
-### Code Style
-
-- Follow Rust conventions
-- Use meaningful variable names
-- Add documentation comments
-- Include error handling
-- Write unit tests
-
-## License
+## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Roadmap
+## 🆘 Support
 
-- [ ] Trust Wallet integration for crypto payments
+- **Issues**: Report bugs and feature requests on GitHub
+- **Documentation**: Check the `/docs` folder for detailed guides
+- **Community**: Join our community discussions
+
+## 🔮 Roadmap
+
+- [ ] Mobile application support
 - [ ] Advanced consensus mechanisms
-- [ ] Mobile application
-- [ ] Plugin system for custom services
-- [ ] Advanced reputation algorithms
-- [ ] Cross-chain compatibility
-- [ ] Formal verification
-- [ ] Performance optimizations
+- [ ] Cross-chain interoperability
+- [ ] Enhanced privacy features
+- [ ] Developer SDK
+- [ ] Plugin system
 
-## Support
+---
 
-For questions and support:
-- Create an issue on GitHub
-- Check the documentation
-- Join the community discussions
-
-## Acknowledgments
-
-- libp2p team for the excellent P2P networking library
-- Rust community for the amazing ecosystem
-- All contributors and supporters 
+**DuxNet** - Building the future of decentralized applications with Rust and P2P technology. 
