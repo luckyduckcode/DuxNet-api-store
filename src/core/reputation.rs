@@ -5,6 +5,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::debug;
 
+#[derive(Clone)]
 pub struct ReputationSystem {
     pub attestations: Arc<RwLock<HashMap<String, Vec<ReputationAttestation>>>>,
     pub scores: Arc<RwLock<HashMap<String, f64>>>,

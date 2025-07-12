@@ -5,6 +5,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info};
 
+#[derive(Clone)]
 pub struct EscrowManager {
     pub contracts: Arc<RwLock<HashMap<String, EscrowContract>>>,
     pub threshold: usize,

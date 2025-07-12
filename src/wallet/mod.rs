@@ -4,6 +4,7 @@ use ed25519_dalek::{SigningKey, VerifyingKey, Signature, Signer, Verifier};
 use rand::rngs::OsRng;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::Arc;
 use tracing::info;
 use base64::{Engine as _, engine::general_purpose};
 
@@ -291,25 +292,34 @@ impl Wallet {
     pub fn send_funds(&mut self, request: SendRequest) -> Result<SendResponse> {
         let current_balance = self.get_balance(&request.currency);
         let fee = request.fee.unwrap_or_else(|| self.calculate_fee(&request.currency));
-        let total_amount = request.amount + fee;
+        
+        // Calculate 5% community fund tax (excluding DUX)
+        let tax_amount = (request.amount * 5) / 100; // 5% tax
+        let total_amount = request.amount + fee + tax_amount;
         
         if current_balance < total_amount {
-            return Err(anyhow::anyhow!("Insufficient balance. Need {} but have {}", 
-                request.currency.format_amount(total_amount), 
+            return Err(anyhow::anyhow!("Insufficient balance. Need {} (amount: {}, fee: {}, tax: {}) but have {}", 
+                request.currency.format_amount(total_amount),
+                request.currency.format_amount(request.amount),
+                request.currency.format_amount(fee),
+                request.currency.format_amount(tax_amount),
                 request.currency.format_amount(current_balance)));
         }
         
         let transaction_id = uuid::Uuid::new_v4().to_string();
         let timestamp = get_current_timestamp();
         
-        let message = format!("{}:{}:{}:{}:{}:{}", 
+        let message = format!("{}:{}:{}:{}:{}:{}:{}", 
             transaction_id, self.did, request.to_address, request.amount, 
-            request.currency.symbol(), fee);
+            request.currency.symbol(), fee, tax_amount);
         
         let keypair = self.get_keypair()?;
         let signature = keypair.sign(message.as_bytes()).to_bytes().to_vec();
         
         let to_address_clone = request.to_address.clone();
+        let currency_clone = request.currency.clone();
+        
+        // Create main transaction
         let transaction = Transaction {
             id: transaction_id.clone(),
             from: self.did.clone(),
@@ -325,20 +335,45 @@ impl Wallet {
             memo: request.memo.clone(),
         };
         
+        // Create tax transaction
+        let tax_transaction_id = format!("{}-tax", transaction_id);
+        let tax_message = format!("{}:{}:{}:{}:{}", 
+            tax_transaction_id, self.did, "community_fund", tax_amount, currency_clone.symbol());
+        let tax_signature = keypair.sign(tax_message.as_bytes()).to_bytes().to_vec();
+        
+        let tax_transaction = Transaction {
+            id: tax_transaction_id,
+            from: self.did.clone(),
+            to: "community_fund".to_string(),
+            amount: tax_amount,
+            currency: currency_clone.clone(),
+            timestamp,
+            signature: tax_signature,
+            status: TransactionStatus::Pending,
+            fee: 0,
+            block_height: None,
+            confirmations: 0,
+            memo: Some("Community Fund Tax".to_string()),
+        };
+        
         // Remove funds from wallet
         self.remove_funds(&request.currency, total_amount)?;
         
-        // Add transaction to history
+        // Add transactions to history
         self.transactions.push(transaction);
+        self.transactions.push(tax_transaction);
         self.last_activity = timestamp;
         
-        info!("Sent {} to {}", request.currency.format_amount(request.amount), to_address_clone);
+        info!("Sent {} to {} (tax: {})", 
+              currency_clone.format_amount(request.amount), 
+              to_address_clone,
+              currency_clone.format_amount(tax_amount));
         
         Ok(SendResponse {
             transaction_id,
             success: true,
-            message: "Transaction sent successfully".to_string(),
-            fee,
+            message: format!("Transaction sent successfully. Tax: {}", currency_clone.format_amount(tax_amount)),
+            fee: fee + tax_amount,
         })
     }
 

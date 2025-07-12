@@ -4,6 +4,7 @@ use ed25519_dalek::{SigningKey, Signer, Verifier};
 use rand::rngs::OsRng;
 use tracing::{debug, info};
 
+#[derive(Clone)]
 pub struct DIDManager {
     pub secret_key: Vec<u8>, // Store only the secret key bytes
     pub keypair: SigningKey,

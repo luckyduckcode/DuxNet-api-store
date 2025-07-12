@@ -224,6 +224,44 @@ pub struct AOIKey {
     pub created_at: u64,
 }
 
+// Community Fund System
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommunityFund {
+    pub currency: crate::wallet::Currency,
+    pub balance: u64,
+    pub last_distribution: u64,
+    pub total_distributed: u64,
+    pub distribution_count: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommunityFundBalance {
+    pub currency: String,
+    pub balance: u64,
+    pub formatted_balance: String,
+    pub last_distribution: u64,
+    pub next_distribution: u64,
+    pub total_distributed: u64,
+    pub distribution_count: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommunityFundDistribution {
+    pub currency: crate::wallet::Currency,
+    pub amount_per_user: u64,
+    pub total_users: usize,
+    pub distribution_timestamp: u64,
+    pub transaction_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommunityFundStats {
+    pub total_balance_usd: f64,
+    pub currencies: Vec<CommunityFundBalance>,
+    pub next_distribution_in: u64, // seconds until next distribution
+    pub total_distributed_all_time: u64,
+}
+
 // Utility functions
 pub fn get_current_timestamp() -> u64 {
     SystemTime::now()

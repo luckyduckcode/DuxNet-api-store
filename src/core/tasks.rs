@@ -3,12 +3,15 @@ use anyhow::Result;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::info;
+use tracing::{info, error};
+use crate::wallet::Currency;
 
+#[derive(Clone)]
 pub struct TaskEngine {
     pub pending_tasks: Arc<RwLock<HashMap<TaskId, Task>>>,
     pub completed_tasks: Arc<RwLock<HashMap<TaskId, TaskResult>>>,
     pub processing_tasks: Arc<RwLock<HashMap<TaskId, String>>>, // task_id -> processor_did
+    pub community_fund_manager: Option<Arc<crate::core::community_fund::CommunityFundManager>>,
 }
 
 impl TaskEngine {
@@ -17,7 +20,13 @@ impl TaskEngine {
             pending_tasks: Arc::new(RwLock::new(HashMap::new())),
             completed_tasks: Arc::new(RwLock::new(HashMap::new())),
             processing_tasks: Arc::new(RwLock::new(HashMap::new())),
+            community_fund_manager: None,
         }
+    }
+
+    pub fn with_community_fund_manager(mut self, manager: Arc<crate::core::community_fund::CommunityFundManager>) -> Self {
+        self.community_fund_manager = Some(manager);
+        self
     }
 
     pub async fn submit_task(&self, task: Task) -> Result<()> {
@@ -117,6 +126,33 @@ impl TaskEngine {
             if let Some(task) = self.accept_task(&task.id, processor_did.clone()).await {
                 let result = self.process_task(task, processor_did).await?;
                 self.complete_task(result).await?;
+            }
+        }
+        
+        // Check for community fund distribution
+        self.check_community_fund_distribution().await?;
+        
+        Ok(())
+    }
+
+    async fn check_community_fund_distribution(&self) -> Result<()> {
+        if let Some(cf_manager) = &self.community_fund_manager {
+            for currency in [Currency::BTC, Currency::ETH, Currency::USDC, Currency::LTC, Currency::XMR, Currency::DOGE] {
+                if cf_manager.should_distribute(&currency).await {
+                    info!("Scheduling community fund distribution for {}", currency.symbol());
+                    
+                    match cf_manager.distribute_fund(currency).await {
+                        Ok(distribution) => {
+                            info!("Community fund distribution completed for {}: {} to {} users", 
+                                  distribution.currency.symbol(),
+                                  distribution.currency.format_amount(distribution.amount_per_user),
+                                  distribution.total_users);
+                        },
+                        Err(e) => {
+                            error!("Failed to distribute community fund for {}: {}", currency.symbol(), e);
+                        }
+                    }
+                }
             }
         }
         

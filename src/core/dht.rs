@@ -13,6 +13,7 @@ pub struct DHTEntry {
     pub ttl: u64,
 }
 
+#[derive(Debug, Clone)]
 pub struct DHT {
     pub node_id: NodeId,
     pub entries: Arc<RwLock<HashMap<String, DHTEntry>>>,
@@ -141,6 +142,59 @@ impl DHT {
         } else {
             None
         }
+    }
+
+    // Community Fund DHT operations
+    pub async fn store_community_fund_transaction(&self, tx_id: &str, currency: &crate::wallet::Currency, 
+                                                 recipient_did: &str, amount: u64) -> Result<()> {
+        let key = format!("cf_tx:{}", tx_id);
+        let value = serde_json::json!({
+            "tx_id": tx_id,
+            "currency": currency.symbol(),
+            "recipient_did": recipient_did,
+            "amount": amount,
+            "timestamp": get_current_timestamp()
+        });
+        let value_bytes = serde_json::to_vec(&value)?;
+        self.store(key, value_bytes, 86400).await // 24 hour TTL
+    }
+
+    pub async fn get_community_fund_transaction(&self, tx_id: &str) -> Option<serde_json::Value> {
+        let key = format!("cf_tx:{}", tx_id);
+        if let Some(value) = self.get(&key).await {
+            serde_json::from_slice(&value).ok()
+        } else {
+            None
+        }
+    }
+
+    pub async fn store_active_did(&self, did: &str) -> Result<()> {
+        let key = format!("active_did:{}", did);
+        let value = serde_json::json!({
+            "did": did,
+            "last_seen": get_current_timestamp(),
+            "active": true
+        });
+        let value_bytes = serde_json::to_vec(&value)?;
+        self.store(key, value_bytes, 86400).await // 24 hour TTL
+    }
+
+    pub async fn get_active_dids(&self) -> Vec<String> {
+        let entries = self.entries.read().await;
+        let mut active_dids = Vec::new();
+        
+        for (key, entry) in entries.iter() {
+            if key.starts_with("active_did:") {
+                if let Ok(data) = serde_json::from_slice::<serde_json::Value>(&entry.value) {
+                    if let Some(did) = data["did"].as_str() {
+                        active_dids.push(did.to_string());
+                    }
+                }
+            }
+        }
+        
+        debug!("Found {} active DIDs", active_dids.len());
+        active_dids
     }
 
     pub async fn add_peer(&self, peer_id: String) -> Result<()> {

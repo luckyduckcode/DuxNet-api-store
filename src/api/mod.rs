@@ -52,6 +52,10 @@ pub async fn start_api_server(port: u16) -> Result<(), Box<dyn std::error::Error
         .route("/api/wallet/keys", get(get_wallet_keys))
         .route("/api/services/aoi/register", post(register_aoi_key))
         .route("/api/services/aoi/get", post(get_aoi_key))
+        .route("/api/community_fund/stats", get(get_community_fund_stats))
+        .route("/api/community_fund/balance/:currency", get(get_community_fund_balance))
+        .route("/api/community_fund/distribute/:currency", post(distribute_community_fund))
+        .route("/api/shutdown", post(shutdown_node))
         .route("/", get(serve_index))
         .route("/index.html", get(serve_index))
         .nest_service("/static", ServeDir::new("static"))
@@ -485,10 +489,115 @@ async fn get_aoi_key(
             success: true,
             message: "AOI key found".to_string(),
         }),
-        None => axum::Json(GetAOIKeyResponse {
+        None =>         axum::Json(GetAOIKeyResponse {
             key_data: None,
             success: false,
             message: "AOI key not found".to_string(),
         }),
     }
+}
+
+// Community Fund API handlers
+async fn get_community_fund_stats(State(state): State<ApiState>) -> impl IntoResponse {
+    let node = &state.node;
+    
+    match node.get_community_fund_stats().await {
+        Ok(stats) => axum::Json(serde_json::json!({
+            "success": true,
+            "data": stats
+        })),
+        Err(e) => {
+            error!("Failed to get community fund stats: {}", e);
+            axum::Json(serde_json::json!({
+                "success": false,
+                "error": format!("Failed to get community fund stats: {}", e)
+            }))
+        }
+    }
+}
+
+async fn get_community_fund_balance(
+    State(state): State<ApiState>,
+    axum::extract::Path(currency_str): axum::extract::Path<String>,
+) -> impl IntoResponse {
+    let node = &state.node;
+    
+    // Parse currency
+    let currency = match currency_str.to_uppercase().as_str() {
+        "BTC" => crate::wallet::Currency::BTC,
+        "ETH" => crate::wallet::Currency::ETH,
+        "USDC" => crate::wallet::Currency::USDC,
+        "LTC" => crate::wallet::Currency::LTC,
+        "XMR" => crate::wallet::Currency::XMR,
+        "DOGE" => crate::wallet::Currency::DOGE,
+        _ => {
+            return axum::Json(serde_json::json!({
+                "success": false,
+                "error": "Invalid currency"
+            }));
+        }
+    };
+    
+    let balance = node.get_community_fund_balance(&currency).await;
+    
+    axum::Json(serde_json::json!({
+        "success": true,
+        "currency": currency.symbol(),
+        "balance": balance,
+        "formatted_balance": currency.format_amount(balance)
+    }))
+}
+
+async fn distribute_community_fund(
+    State(state): State<ApiState>,
+    axum::extract::Path(currency_str): axum::extract::Path<String>,
+) -> impl IntoResponse {
+    let node = &state.node;
+    
+    // Parse currency
+    let currency = match currency_str.to_uppercase().as_str() {
+        "BTC" => crate::wallet::Currency::BTC,
+        "ETH" => crate::wallet::Currency::ETH,
+        "USDC" => crate::wallet::Currency::USDC,
+        "LTC" => crate::wallet::Currency::LTC,
+        "XMR" => crate::wallet::Currency::XMR,
+        "DOGE" => crate::wallet::Currency::DOGE,
+        _ => {
+            return axum::Json(serde_json::json!({
+                "success": false,
+                "error": "Invalid currency"
+            }));
+        }
+    };
+    
+    match node.distribute_community_fund(currency).await {
+        Ok(distribution) => {
+            info!("Community fund distribution completed for {}: {} to {} users", 
+                  distribution.currency.symbol(), 
+                  distribution.currency.format_amount(distribution.amount_per_user),
+                  distribution.total_users);
+            
+            axum::Json(serde_json::json!({
+                "success": true,
+                "message": format!("Distributed {} to {} users", 
+                                 distribution.currency.format_amount(distribution.amount_per_user),
+                                 distribution.total_users),
+                "data": distribution
+            }))
+        },
+        Err(e) => {
+            error!("Failed to distribute community fund: {}", e);
+            axum::Json(serde_json::json!({
+                "success": false,
+                "error": format!("Failed to distribute community fund: {}", e)
+            }))
+        }
+    }
+} 
+
+async fn shutdown_node() -> impl IntoResponse {
+    // In a real app, signal the main loop to exit gracefully
+    std::process::exit(0);
+    // This line is unreachable, but required for the type
+    StatusCode::OK
 } 

@@ -4,6 +4,7 @@ pub mod identity;
 pub mod reputation;
 pub mod escrow;
 pub mod tasks;
+pub mod community_fund;
 
 use anyhow::Result;
 use std::sync::Arc;
@@ -16,8 +17,10 @@ use identity::DIDManager;
 use reputation::ReputationSystem;
 use escrow::EscrowManager;
 use tasks::TaskEngine;
+use community_fund::CommunityFundManager;
 use crate::network::P2PNetwork;
 
+#[derive(Clone)]
 pub struct DuxNetNode {
     pub node_id: NodeId,
     pub did_manager: DIDManager,
@@ -25,6 +28,7 @@ pub struct DuxNetNode {
     pub reputation_system: ReputationSystem,
     pub escrow_manager: EscrowManager,
     pub task_engine: TaskEngine,
+    pub community_fund_manager: Arc<CommunityFundManager>,
     pub network: Arc<P2PNetwork>,
     pub wallet: Arc<RwLock<crate::wallet::Wallet>>,
     pub is_running: Arc<RwLock<bool>>,
@@ -39,7 +43,8 @@ impl DuxNetNode {
         let dht = DHT::new(node_id.clone());
         let reputation_system = ReputationSystem::new();
         let escrow_manager = EscrowManager::new();
-        let task_engine = TaskEngine::new();
+        let community_fund_manager = Arc::new(CommunityFundManager::new(Arc::new(dht.clone())));
+        let task_engine = TaskEngine::new().with_community_fund_manager(community_fund_manager.clone());
         let network = Arc::new(P2PNetwork::new(port).await?);
         let wallet = Arc::new(RwLock::new(crate::wallet::Wallet::new(did_manager.did.id.clone())?));
         let is_running = Arc::new(RwLock::new(false));
@@ -51,6 +56,7 @@ impl DuxNetNode {
             reputation_system,
             escrow_manager,
             task_engine,
+            community_fund_manager,
             network,
             wallet,
             is_running,
@@ -208,5 +214,22 @@ impl DuxNetNode {
 
     pub async fn get_aoi_key_for_service(&self, service_id: ServiceId) -> Option<AOIKey> {
         self.dht.get_aoi_key(&service_id).await
+    }
+
+    // Community Fund Management
+    pub async fn get_community_fund_stats(&self) -> Result<CommunityFundStats> {
+        self.community_fund_manager.get_stats().await
+    }
+
+    pub async fn get_community_fund_balance(&self, currency: &crate::wallet::Currency) -> u64 {
+        self.community_fund_manager.get_fund_balance(currency).await
+    }
+
+    pub async fn distribute_community_fund(&self, currency: crate::wallet::Currency) -> Result<CommunityFundDistribution> {
+        self.community_fund_manager.distribute_fund(currency).await
+    }
+
+    pub async fn add_tax_to_community_fund(&self, currency: crate::wallet::Currency, tax_amount: u64) -> Result<()> {
+        self.community_fund_manager.add_tax_to_fund(currency, tax_amount).await
     }
 } 
