@@ -707,3 +707,143 @@ async function getAOIKey() {
         document.getElementById('aoiKeyResult').innerHTML = `<p style='color:red;'>Failed to retrieve AOI key</p>`;
     }
 } 
+
+// Messaging functionality
+async function sendMessage() {
+    const messageInput = document.getElementById('messageInput');
+    const messageType = document.getElementById('messageType');
+    const content = messageInput.value.trim();
+    
+    if (!content) {
+        showNotification('Please enter a message', 'error');
+        return;
+    }
+    
+    // For demo purposes, send to a test peer
+    const toDid = 'did:duxnet:test-peer-123';
+    
+    try {
+        // Check if we're in Tauri app
+        if (window.__TAURI__) {
+            const result = await window.__TAURI__.invoke('send_message', {
+                toDid: toDid,
+                content: content,
+                messageType: messageType.value
+            });
+            
+            if (result.success) {
+                showNotification('Message sent successfully!', 'success');
+                messageInput.value = '';
+                loadConversations();
+            } else {
+                showNotification('Failed to send message: ' + result.error, 'error');
+            }
+        } else {
+            // Fallback to API call
+            const response = await fetch('/api/messaging/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    to_did: toDid,
+                    content: content,
+                    message_type: messageType.value,
+                    reply_to: null
+                })
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                showNotification('Message sent successfully!', 'success');
+                messageInput.value = '';
+                loadConversations();
+            } else {
+                showNotification('Failed to send message: ' + result.message, 'error');
+            }
+        }
+    } catch (error) {
+        showNotification('Error sending message: ' + error.message, 'error');
+    }
+}
+
+async function loadConversations() {
+    try {
+        let conversations = [];
+        
+        if (window.__TAURI__) {
+            const result = await window.__TAURI__.invoke('get_conversations');
+            if (result.success) {
+                conversations = result.data;
+            }
+        } else {
+            const response = await fetch('/api/messaging/conversations');
+            const result = await response.json();
+            if (result.success) {
+                conversations = result.conversations;
+            }
+        }
+        
+        displayConversations(conversations);
+    } catch (error) {
+        console.error('Error loading conversations:', error);
+    }
+}
+
+function displayConversations(conversations) {
+    const conversationsList = document.getElementById('conversationsList');
+    
+    if (conversations.length === 0) {
+        conversationsList.innerHTML = '<div class="conversation-item"><small>No conversations yet</small></div>';
+        return;
+    }
+    
+    conversationsList.innerHTML = conversations.map(conv => `
+        <div class="conversation-item" onclick="loadMessages('${conv.peer_did}')">
+            <div class="conversation-header">
+                <strong>${conv.peer_did}</strong>
+                ${conv.unread_count > 0 ? `<span class="unread-badge">${conv.unread_count}</span>` : ''}
+            </div>
+            <small>${conv.last_message ? conv.last_message.content.substring(0, 50) + '...' : 'No messages yet'}</small>
+        </div>
+    `).join('');
+}
+
+async function loadMessages(peerDid) {
+    try {
+        let messages = [];
+        
+        if (window.__TAURI__) {
+            const result = await window.__TAURI__.invoke('get_messages', { peerDid: peerDid });
+            if (result.success) {
+                messages = result.data;
+            }
+        } else {
+            const response = await fetch(`/api/messaging/messages/${encodeURIComponent(peerDid)}`);
+            const result = await response.json();
+            if (result.success) {
+                messages = result.messages;
+            }
+        }
+        
+        // For now, just show a notification with message count
+        showNotification(`Loaded ${messages.length} messages from ${peerDid}`, 'info');
+    } catch (error) {
+        console.error('Error loading messages:', error);
+    }
+}
+
+// Load conversations on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadConversations();
+    
+    // Add enter key support for message input
+    const messageInput = document.getElementById('messageInput');
+    if (messageInput) {
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    }
+}); 

@@ -623,7 +623,7 @@ async fn shutdown_node() -> impl IntoResponse {
 // Messaging API endpoints
 async fn send_message(
     State(state): State<ApiState>,
-    axum::Json(request): axum::Json<MessageRequest>,
+    axum::Json(request): axum::Json<crate::core::data_structures::MessageRequest>,
 ) -> impl IntoResponse {
     let node = &state.node;
     
@@ -631,7 +631,7 @@ async fn send_message(
         Ok(response) => axum::Json(response),
         Err(e) => {
             error!("Failed to send message: {}", e);
-            axum::Json(MessageResponse {
+            axum::Json(crate::core::data_structures::MessageResponse {
                 message_id: "".to_string(),
                 success: false,
                 message: format!("Failed to send message: {}", e),

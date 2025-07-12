@@ -699,6 +699,37 @@
                     </div>
                 </div>
             </div>
+            
+            <div class="panel">
+                <h2>Messaging</h2>
+                <div class="messaging-container">
+                    <div class="conversations-list" id="conversationsList">
+                        <div class="conversation-item">
+                            <div class="conversation-header">
+                                <strong>did:duxnet:peer-a1b2</strong>
+                                <span class="unread-badge">2</span>
+                            </div>
+                            <small>Hello! I'm interested in your AI services...</small>
+                        </div>
+                        <div class="conversation-item">
+                            <div class="conversation-header">
+                                <strong>did:duxnet:peer-c3d4</strong>
+                            </div>
+                            <small>Task completed successfully. Payment ready.</small>
+                        </div>
+                    </div>
+                    <div class="message-composer">
+                        <input type="text" id="messageInput" placeholder="Type your message..." />
+                        <select id="messageType">
+                            <option value="text">Text</option>
+                            <option value="service_request">Service Request</option>
+                            <option value="task_update">Task Update</option>
+                            <option value="escrow_update">Escrow Update</option>
+                        </select>
+                        <button onclick="sendMessage()">Send</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

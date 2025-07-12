@@ -5,6 +5,7 @@ pub mod reputation;
 pub mod escrow;
 pub mod tasks;
 pub mod community_fund;
+pub mod messaging;
 
 use anyhow::Result;
 use std::sync::Arc;
@@ -18,6 +19,7 @@ use reputation::ReputationSystem;
 use escrow::EscrowManager;
 use tasks::TaskEngine;
 use community_fund::CommunityFundManager;
+use messaging::MessagingSystem;
 use crate::network::P2PNetwork;
 
 #[derive(Clone)]
@@ -29,6 +31,7 @@ pub struct DuxNetNode {
     pub escrow_manager: EscrowManager,
     pub task_engine: TaskEngine,
     pub community_fund_manager: Arc<CommunityFundManager>,
+    pub messaging_system: Arc<MessagingSystem>,
     pub network: Arc<P2PNetwork>,
     pub wallet: Arc<RwLock<crate::wallet::Wallet>>,
     pub is_running: Arc<RwLock<bool>>,
@@ -45,6 +48,7 @@ impl DuxNetNode {
         let escrow_manager = EscrowManager::new();
         let community_fund_manager = Arc::new(CommunityFundManager::new(Arc::new(dht.clone())));
         let task_engine = TaskEngine::new().with_community_fund_manager(community_fund_manager.clone());
+        let messaging_system = Arc::new(MessagingSystem::new(did_manager.clone()));
         let network = Arc::new(P2PNetwork::new(port).await?);
         let wallet = Arc::new(RwLock::new(crate::wallet::Wallet::new(did_manager.did.id.clone())?));
         let is_running = Arc::new(RwLock::new(false));
@@ -57,6 +61,7 @@ impl DuxNetNode {
             escrow_manager,
             task_engine,
             community_fund_manager,
+            messaging_system,
             network,
             wallet,
             is_running,

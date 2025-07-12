@@ -25,6 +25,7 @@ impl P2PNetwork {
             topics_guard.insert("tasks".to_string(), "tasks".to_string());
             topics_guard.insert("escrow".to_string(), "escrow".to_string());
             topics_guard.insert("reputation".to_string(), "reputation".to_string());
+            topics_guard.insert("messaging".to_string(), "messaging".to_string());
         }
         
         let is_running = Arc::new(RwLock::new(false));

@@ -96,6 +96,54 @@ pub struct TaskResult {
     pub completed_at: u64,
 }
 
+// Messaging system
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Message {
+    pub id: String,
+    pub from_did: String,
+    pub to_did: String,
+    pub content: String,
+    pub message_type: MessageType,
+    pub timestamp: u64,
+    pub signature: Vec<u8>,
+    pub is_read: bool,
+    pub reply_to: Option<String>, // ID of message being replied to
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum MessageType {
+    Text,
+    File,
+    ServiceRequest,
+    TaskUpdate,
+    EscrowUpdate,
+    ReputationUpdate,
+    System,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageRequest {
+    pub to_did: String,
+    pub content: String,
+    pub message_type: MessageType,
+    pub reply_to: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageResponse {
+    pub message_id: String,
+    pub success: bool,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Conversation {
+    pub peer_did: String,
+    pub last_message: Option<Message>,
+    pub unread_count: usize,
+    pub message_count: usize,
+}
+
 // Network messages
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NetworkMessage {
@@ -118,6 +166,11 @@ pub enum NetworkMessage {
     ReputationAttestation(ReputationAttestation),
     ReputationQuery(String), // target_did
     ReputationResponse(String, f64), // target_did, score
+    
+    // Messaging
+    DirectMessage(Message),
+    MessageAck(String), // message_id
+    MessageDelivery(String), // message_id
     
     // P2P ping/pong
     Ping,

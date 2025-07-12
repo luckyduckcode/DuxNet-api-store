@@ -238,7 +238,7 @@ async fn get_messaging_stats(state: tauri::State<'_, DuxNetState>) -> Result<ser
 #[tauri::command]
 async fn get_dux_balance(state: tauri::State<'_, DuxNetState>) -> Result<serde_json::Value, String> {
     let node = &state.node;
-    let wallet = &node.wallet;
+    let wallet = node.wallet.read().await;
     let dux_address = wallet.get_address(&crate::wallet::Currency::DUX);
     
     let balance = wallet.get_balance(&crate::wallet::Currency::DUX);
@@ -256,7 +256,7 @@ async fn get_dux_balance(state: tauri::State<'_, DuxNetState>) -> Result<serde_j
 #[tauri::command]
 async fn get_dux_transactions(state: tauri::State<'_, DuxNetState>) -> Result<serde_json::Value, String> {
     let node = &state.node;
-    let wallet = &node.wallet;
+    let wallet = node.wallet.read().await;
     let transactions = wallet.get_transactions_by_currency(&crate::wallet::Currency::DUX);
     
     Ok(serde_json::json!({
@@ -273,7 +273,7 @@ async fn send_dux(
     request: serde_json::Value,
 ) -> Result<serde_json::Value, String> {
     let node = &state.node;
-    let mut wallet = node.wallet.clone();
+    let mut wallet = node.wallet.write().await;
     
     let to_address = request["to_address"].as_str().unwrap_or("");
     let amount = request["amount"].as_u64().unwrap_or(0);
@@ -352,7 +352,7 @@ async fn get_dux_mining_status(state: tauri::State<'_, DuxNetState>) -> Result<s
 #[tauri::command]
 async fn sync_dux_balance(state: tauri::State<'_, DuxNetState>) -> Result<serde_json::Value, String> {
     let node = &state.node;
-    let wallet = &node.wallet;
+    let wallet = node.wallet.read().await;
     let balance = wallet.get_balance(&crate::wallet::Currency::DUX);
     
     Ok(serde_json::json!({

@@ -680,3 +680,127 @@ body {
         grid-template-columns: 1fr;
     }
 } 
+
+/* Messaging Styles */
+.messaging-container {
+    display: flex;
+    flex-direction: column;
+    height: 300px;
+}
+
+.conversations-list {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.conversation-item {
+    padding: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.conversation-item:hover {
+    background: rgba(0, 255, 255, 0.1);
+}
+
+.conversation-item:last-child {
+    border-bottom: none;
+}
+
+.conversation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.conversation-header strong {
+    color: #00ffff;
+    font-size: 0.9rem;
+}
+
+.unread-badge {
+    background: linear-gradient(45deg, #ff4444, #cc0000);
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: bold;
+    box-shadow: 0 2px 5px rgba(255, 68, 68, 0.3);
+}
+
+.conversation-item small {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.8rem;
+    line-height: 1.3;
+}
+
+.message-composer {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.message-composer input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+    font-size: 0.9rem;
+}
+
+.message-composer input:focus {
+    outline: none;
+    border-color: #00ffff;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+}
+
+.message-composer select {
+    padding: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.message-composer select:focus {
+    outline: none;
+    border-color: #00ffff;
+}
+
+.message-composer button {
+    padding: 10px 20px;
+    background: linear-gradient(45deg, #00ffff, #0080ff);
+    color: #000000;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.message-composer button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 255, 255, 0.4);
+}
+
+.message-composer button:disabled {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.5);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+} 
