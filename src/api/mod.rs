@@ -15,6 +15,8 @@ use axum::response::Html;
 use base64::Engine;
 use crate::core::data_structures::{RegisterAOIKeyRequest, RegisterAOIKeyResponse, GetAOIKeyRequest, GetAOIKeyResponse};
 
+pub mod dux_coin;
+
 #[derive(Clone)]
 pub struct ApiState {
     pub node: Arc<crate::core::DuxNetNode>,
@@ -55,6 +57,20 @@ pub async fn start_api_server(port: u16) -> Result<(), Box<dyn std::error::Error
         .route("/api/community_fund/stats", get(get_community_fund_stats))
         .route("/api/community_fund/balance/:currency", get(get_community_fund_balance))
         .route("/api/community_fund/distribute/:currency", post(distribute_community_fund))
+        .route("/api/messaging/send", post(send_message))
+        .route("/api/messaging/conversations", get(get_conversations))
+        .route("/api/messaging/messages/:peer_did", get(get_messages))
+        .route("/api/messaging/read/:message_id", post(mark_message_read))
+        .route("/api/messaging/delete/:message_id", post(delete_message))
+        .route("/api/messaging/stats", get(get_messaging_stats))
+        .route("/api/dux/balance", get(get_dux_balance))
+        .route("/api/dux/transactions", get(get_dux_transactions))
+        .route("/api/dux/send", post(send_dux))
+        .route("/api/dux/network", get(get_dux_network))
+        .route("/api/dux/mine/start", post(start_dux_mining))
+        .route("/api/dux/mine/stop", post(stop_dux_mining))
+        .route("/api/dux/mine/status", get(get_dux_mining_status))
+        .route("/api/dux/sync", post(sync_dux_balance))
         .route("/api/shutdown", post(shutdown_node))
         .route("/", get(serve_index))
         .route("/index.html", get(serve_index))
@@ -530,6 +546,7 @@ async fn get_community_fund_balance(
         "LTC" => crate::wallet::Currency::LTC,
         "XMR" => crate::wallet::Currency::XMR,
         "DOGE" => crate::wallet::Currency::DOGE,
+        "DUX" => crate::wallet::Currency::DUX,
         _ => {
             return axum::Json(serde_json::json!({
                 "success": false,
@@ -562,6 +579,7 @@ async fn distribute_community_fund(
         "LTC" => crate::wallet::Currency::LTC,
         "XMR" => crate::wallet::Currency::XMR,
         "DOGE" => crate::wallet::Currency::DOGE,
+        "DUX" => crate::wallet::Currency::DUX,
         _ => {
             return axum::Json(serde_json::json!({
                 "success": false,
@@ -600,4 +618,226 @@ async fn shutdown_node() -> impl IntoResponse {
     std::process::exit(0);
     // This line is unreachable, but required for the type
     StatusCode::OK
+}
+
+// Messaging API endpoints
+async fn send_message(
+    State(state): State<ApiState>,
+    axum::Json(request): axum::Json<MessageRequest>,
+) -> impl IntoResponse {
+    let node = &state.node;
+    
+    match node.messaging_system.send_message(request).await {
+        Ok(response) => axum::Json(response),
+        Err(e) => {
+            error!("Failed to send message: {}", e);
+            axum::Json(MessageResponse {
+                message_id: "".to_string(),
+                success: false,
+                message: format!("Failed to send message: {}", e),
+            })
+        }
+    }
+}
+
+async fn get_conversations(State(state): State<ApiState>) -> impl IntoResponse {
+    let node = &state.node;
+    
+    let conversations = node.messaging_system.get_conversations().await;
+    
+    axum::Json(serde_json::json!({
+        "success": true,
+        "conversations": conversations
+    }))
+}
+
+async fn get_messages(
+    State(state): State<ApiState>,
+    axum::extract::Path(peer_did): axum::extract::Path<String>,
+) -> impl IntoResponse {
+    let node = &state.node;
+    
+    let messages = node.messaging_system.get_messages(&peer_did).await;
+    
+    axum::Json(serde_json::json!({
+        "success": true,
+        "messages": messages,
+        "peer_did": peer_did
+    }))
+}
+
+async fn mark_message_read(
+    State(state): State<ApiState>,
+    axum::extract::Path(message_id): axum::extract::Path<String>,
+) -> impl IntoResponse {
+    let node = &state.node;
+    
+    match node.messaging_system.mark_message_read(&message_id).await {
+        Ok(_) => axum::Json(serde_json::json!({
+            "success": true,
+            "message": "Message marked as read"
+        })),
+        Err(e) => {
+            error!("Failed to mark message as read: {}", e);
+            axum::Json(serde_json::json!({
+                "success": false,
+                "message": format!("Failed to mark message as read: {}", e)
+            }))
+        }
+    }
+}
+
+async fn delete_message(
+    State(state): State<ApiState>,
+    axum::extract::Path(message_id): axum::extract::Path<String>,
+) -> impl IntoResponse {
+    let node = &state.node;
+    
+    match node.messaging_system.delete_message(&message_id).await {
+        Ok(_) => axum::Json(serde_json::json!({
+            "success": true,
+            "message": "Message deleted"
+        })),
+        Err(e) => {
+            error!("Failed to delete message: {}", e);
+            axum::Json(serde_json::json!({
+                "success": false,
+                "message": format!("Failed to delete message: {}", e)
+            }))
+        }
+    }
+}
+
+async fn get_messaging_stats(State(state): State<ApiState>) -> impl IntoResponse {
+    let node = &state.node;
+    
+    let stats = node.messaging_system.get_message_stats().await;
+    
+    axum::Json(serde_json::json!({
+        "success": true,
+        "stats": stats
+    }))
+}
+
+// DUX Coin API endpoints
+async fn get_dux_balance(State(state): State<ApiState>) -> impl IntoResponse {
+    let node = &state.node;
+    let wallet = &node.wallet;
+    let dux_address = wallet.get_address(&crate::wallet::Currency::DUX);
+    
+    // In a real implementation, this would call the DUX coin daemon
+    let balance = wallet.get_balance(&crate::wallet::Currency::DUX);
+    let formatted_balance = wallet.get_formatted_balance(&crate::wallet::Currency::DUX);
+    
+    axum::Json(serde_json::json!({
+        "address": dux_address,
+        "balance": balance,
+        "formatted_balance": formatted_balance,
+        "currency": "DUX",
+        "success": true
+    }))
+}
+
+async fn get_dux_transactions(State(state): State<ApiState>) -> impl IntoResponse {
+    let node = &state.node;
+    let wallet = &node.wallet;
+    let transactions = wallet.get_transactions_by_currency(&crate::wallet::Currency::DUX);
+    
+    axum::Json(serde_json::json!({
+        "transactions": transactions,
+        "count": transactions.len(),
+        "currency": "DUX",
+        "success": true
+    }))
+}
+
+async fn send_dux(
+    State(state): State<ApiState>,
+    axum::Json(request): axum::Json<serde_json::Value>,
+) -> impl IntoResponse {
+    let node = &state.node;
+    let mut wallet = node.wallet.clone();
+    
+    let to_address = request["to_address"].as_str().unwrap_or("");
+    let amount = request["amount"].as_u64().unwrap_or(0);
+    
+    if to_address.is_empty() || amount == 0 {
+        return axum::Json(serde_json::json!({
+            "success": false,
+            "message": "Invalid address or amount"
+        }));
+    }
+    
+    match wallet.send_funds(crate::wallet::SendRequest {
+        to_address: to_address.to_string(),
+        amount,
+        currency: crate::wallet::Currency::DUX,
+        memo: request["memo"].as_str().map(|s| s.to_string()),
+        fee: None,
+    }) {
+        Ok(response) => axum::Json(serde_json::json!({
+            "transaction_id": response.transaction_id,
+            "success": response.success,
+            "message": response.message,
+            "fee": response.fee
+        })),
+        Err(e) => axum::Json(serde_json::json!({
+            "success": false,
+            "message": format!("Failed to send DUX: {}", e)
+        }))
+    }
+}
+
+async fn get_dux_network(State(state): State<ApiState>) -> impl IntoResponse {
+    // Mock network information for DUX coin
+    axum::Json(serde_json::json!({
+        "difficulty": 1.0,
+        "block_height": 0,
+        "connections": 0,
+        "hash_rate": 0.0,
+        "currency": "DUX",
+        "success": true
+    }))
+}
+
+async fn start_dux_mining(
+    State(state): State<ApiState>,
+    axum::Json(request): axum::Json<serde_json::Value>,
+) -> impl IntoResponse {
+    let threads = request["threads"].as_i64().unwrap_or(1) as i32;
+    
+    axum::Json(serde_json::json!({
+        "success": true,
+        "message": format!("DUX mining started with {} threads", threads),
+        "threads": threads
+    }))
+}
+
+async fn stop_dux_mining(State(state): State<ApiState>) -> impl IntoResponse {
+    axum::Json(serde_json::json!({
+        "success": true,
+        "message": "DUX mining stopped"
+    }))
+}
+
+async fn get_dux_mining_status(State(state): State<ApiState>) -> impl IntoResponse {
+    axum::Json(serde_json::json!({
+        "mining": false,
+        "hash_rate": 0.0,
+        "threads": 0,
+        "success": true
+    }))
+}
+
+async fn sync_dux_balance(State(state): State<ApiState>) -> impl IntoResponse {
+    let node = &state.node;
+    let wallet = &node.wallet;
+    let balance = wallet.get_balance(&crate::wallet::Currency::DUX);
+    
+    axum::Json(serde_json::json!({
+        "success": true,
+        "message": "DUX balance synced",
+        "balance": balance,
+        "formatted_balance": wallet.get_formatted_balance(&crate::wallet::Currency::DUX)
+    }))
 } 

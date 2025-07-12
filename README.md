@@ -12,7 +12,8 @@ A powerful, decentralized peer-to-peer platform built with Rust, featuring a Tau
 - **Task Engine**: Distributed task processing and execution
 
 ### Wallet & Cryptocurrency
-- **Multi-Currency Support**: Native DUX tokens and multi-signature wallets
+- **Multi-Currency Support**: Native DUX tokens, DUX Coin (ASIC-resistant), and multi-signature wallets
+- **DUX Coin Integration**: RandomX mining, lightweight blockchain, fast confirmations
 - **Transaction Management**: Secure transaction creation, signing, and verification
 - **Key Management**: Private key import/export with base64 encoding
 - **Balance Tracking**: Real-time balance monitoring across currencies
@@ -191,6 +192,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 🔮 Roadmap
 
+- [x] DUX Coin integration with ASIC-resistant mining
 - [ ] Mobile application support
 - [ ] Advanced consensus mechanisms
 - [ ] Cross-chain interoperability

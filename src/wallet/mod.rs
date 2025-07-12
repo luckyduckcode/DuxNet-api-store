@@ -16,6 +16,7 @@ pub enum Currency {
     LTC,    // Litecoin
     XMR,    // Monero
     DOGE,   // Dogecoin
+    DUX,    // DUX Coin (ASIC-resistant)
 }
 
 impl Currency {
@@ -27,6 +28,7 @@ impl Currency {
             Currency::LTC => "LTC",
             Currency::XMR => "XMR",
             Currency::DOGE => "DOGE",
+            Currency::DUX => "DUX",
         }
     }
 
@@ -38,6 +40,7 @@ impl Currency {
             Currency::LTC => "Litecoin",
             Currency::XMR => "Monero",
             Currency::DOGE => "Dogecoin",
+            Currency::DUX => "DUX Coin",
         }
     }
 
@@ -49,6 +52,7 @@ impl Currency {
             Currency::LTC => 8,
             Currency::XMR => 12,
             Currency::DOGE => 8,
+            Currency::DUX => 8,
         }
     }
 
@@ -60,6 +64,7 @@ impl Currency {
             Currency::LTC => 0,      // No free Litecoin
             Currency::XMR => 0,      // No free Monero
             Currency::DOGE => 10000, // 10,000 DOGE (much wow!)
+            Currency::DUX => 50000,  // 50,000 DUX (ASIC-resistant rewards!)
         }
     }
 
@@ -160,7 +165,7 @@ impl Wallet {
         let mut addresses = HashMap::new();
         
         // Initialize balances and addresses for all supported currencies
-        for currency in [Currency::BTC, Currency::ETH, Currency::USDC, Currency::LTC, Currency::XMR, Currency::DOGE] {
+        for currency in [Currency::BTC, Currency::ETH, Currency::USDC, Currency::LTC, Currency::XMR, Currency::DOGE, Currency::DUX] {
             balances.insert(currency, currency.initial_balance());
             addresses.insert(currency, Self::generate_address(&currency, &keypair.verifying_key()));
         }
@@ -232,6 +237,7 @@ impl Wallet {
             Currency::LTC => format!("L{}", hex::encode(&pub_bytes[..20])),
             Currency::XMR => format!("4{}", hex::encode(&pub_bytes[..32])),
             Currency::DOGE => format!("D{}", hex::encode(&pub_bytes[..20])),
+            Currency::DUX => format!("D{}", hex::encode(&pub_bytes[..20])), // DUX addresses start with 'D'
         }
     }
     
@@ -257,6 +263,7 @@ impl Wallet {
             (Currency::LTC, 150.0),
             (Currency::XMR, 200.0),
             (Currency::DOGE, 0.08),
+            (Currency::DUX, 0.10), // DUX coin price
         ]);
 
         let mut total_usd = 0.0;
@@ -422,6 +429,7 @@ impl Wallet {
             Currency::LTC => 10000, // 0.0001 LTC
             Currency::XMR => 1000000000, // 0.001 XMR
             Currency::DOGE => 1000000, // 0.01 DOGE
+            Currency::DUX => 500000, // 0.005 DUX (low fees for API usage)
         }
     }
     
@@ -548,7 +556,7 @@ impl Wallet {
         let mut addresses = HashMap::new();
         let mut balances = HashMap::new();
         
-        for currency in [Currency::BTC, Currency::ETH, Currency::USDC, Currency::LTC, Currency::XMR, Currency::DOGE] {
+        for currency in [Currency::BTC, Currency::ETH, Currency::USDC, Currency::LTC, Currency::XMR, Currency::DOGE, Currency::DUX] {
             addresses.insert(currency.symbol().to_string(), self.get_address(&currency));
             balances.insert(currency.symbol().to_string(), self.get_formatted_balance(&currency));
         }
@@ -579,7 +587,7 @@ impl Wallet {
         let mut addresses = HashMap::new();
         
         // Initialize balances and addresses for all supported currencies
-        for currency in [Currency::BTC, Currency::ETH, Currency::USDC, Currency::LTC, Currency::XMR, Currency::DOGE] {
+        for currency in [Currency::BTC, Currency::ETH, Currency::USDC, Currency::LTC, Currency::XMR, Currency::DOGE, Currency::DUX] {
             balances.insert(currency, currency.initial_balance());
             addresses.insert(currency, Self::generate_address(&currency, &keypair.verifying_key()));
         }
