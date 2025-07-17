@@ -98,6 +98,8 @@ src-tauri/         # Tauri desktop app
 static/            # Static web assets
 ```
 
+#### 📚 [See MODULES.md for a detailed module index and documentation](./MODULES.md)
+
 ### Building for Development
 ```bash
 # Development build

@@ -1,3 +1,33 @@
+//! # Wallet Module
+//!
+//! This module implements all cryptocurrency wallet functionality for the DuxNet platform.
+//! It includes multi-currency support, transaction management, key handling, and multi-signature wallets.
+//!
+//! ## Purpose
+//! - Provides the `Wallet` struct and methods for managing balances, addresses, and transactions.
+//! - Supports multiple currencies (BTC, ETH, USDC, LTC, XMR, DOGE, DUX).
+//! - Implements transaction creation, signing, verification, and history.
+//! - Includes multi-signature wallet logic for enhanced security.
+//!
+//! ## Main Components
+//! - `Currency`: Enum for supported currencies and related methods.
+//! - `Wallet`: Main wallet struct and methods for balance, address, and transaction management.
+//! - `Transaction`, `TransactionStatus`: Transaction data structures and status tracking.
+//! - `MultiSigWallet`, `MultiSigTransaction`: Multi-signature wallet and transaction logic.
+//!
+//! ## Best Practices
+//! - Keep currency logic, wallet logic, and multi-sig logic clearly separated.
+//! - Use strong typing and serialization for all public data structures.
+//! - Add doc comments to all public types and methods.
+//! - If the module grows, consider splitting into submodules (currency.rs, wallet.rs, transaction.rs, multisig.rs).
+//!
+//! ## Future Improvements
+//! - Add support for additional currencies or tokens.
+//! - Expand multi-sig features and user interface.
+//! - Improve error handling and validation.
+//! - Add more comprehensive tests for wallet operations.
+//!
+//! This structure ensures wallet logic is secure, extensible, and easy to maintain as the platform evolves.
 use crate::core::data_structures::*;
 use anyhow::Result;
 use ed25519_dalek::{SigningKey, VerifyingKey, Signature, Signer, Verifier};

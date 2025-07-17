@@ -1,3 +1,28 @@
+//! # Frontend Module
+//!
+//! This module provides the integration layer for serving the web frontend of the DuxNet platform.
+//! It serves static web assets and the main index.html for the Tauri desktop app and web interface.
+//!
+//! ## Purpose
+//! - Exposes Axum routes for serving static files and the main HTML entry point.
+//! - Bridges the Rust backend with the web-based frontend (Tauri or browser).
+//!
+//! ## Main Components
+//! - `create_frontend_router`: Returns a router for serving static assets and index.html.
+//! - `serve_index`: Handler for serving the main HTML file.
+//! - `serve_static_file`: Handler for serving static assets from the `static/` directory.
+//!
+//! ## Best Practices
+//! - Keep frontend serving logic minimal and focused on static asset delivery.
+//! - Use clear route definitions for static and index serving.
+//! - If frontend logic grows, consider splitting into submodules (e.g., for API proxying, SSR, etc.).
+//!
+//! ## Future Improvements
+//! - Add support for frontend asset versioning or cache busting.
+//! - Integrate with frontend build tools for automated asset management.
+//! - Expand to support additional frontend frameworks or SSR if needed.
+//!
+//! This structure ensures the frontend integration is simple, reliable, and easy to extend as the platform evolves.
 use axum::{
     extract::Path,
     http::StatusCode,

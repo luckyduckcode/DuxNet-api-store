@@ -1,3 +1,29 @@
+//! # Network Module
+//!
+//! This module implements the peer-to-peer (P2P) networking layer for the DuxNet platform.
+//! It provides node communication, peer management, protocol handlers, and network statistics.
+//!
+//! ## Purpose
+//! - Manages all network connections and peer discovery.
+//! - Handles message publishing, event processing, and network state.
+//! - Provides abstractions for network statistics and peer management.
+//!
+//! ## Main Components
+//! - `P2PNetwork`: Main struct for managing network state and peer connections.
+//! - `NetworkStats`: Struct for reporting network statistics.
+//!
+//! ## Best Practices
+//! - Keep networking logic isolated from business logic (handled in core).
+//! - Use async and thread-safe primitives for all network state.
+//! - Add doc comments to all public types and methods.
+//! - If the module grows, consider splitting protocol handlers or message types into submodules.
+//!
+//! ## Future Improvements
+//! - Add support for advanced peer discovery and NAT traversal.
+//! - Implement more robust message routing and error handling.
+//! - Expand network metrics and monitoring features.
+//!
+//! This structure ensures the networking layer is robust, scalable, and easy to extend as the platform evolves.
 use crate::core::data_structures::*;
 use anyhow::Result;
 use std::collections::HashMap;

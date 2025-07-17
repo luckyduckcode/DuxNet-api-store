@@ -23,6 +23,7 @@ anyhow = "1.0"
 thiserror = "1.0"
 async-trait = "0.1"
 futures = "0.3"
+libp2p = { version = "0.52", features = ["tcp-tokio", "websocket", "mdns", "noise", "yamux", "gossipsub", "identify"] }
 
 [dev-dependencies]
 tokio-test = "0.4"

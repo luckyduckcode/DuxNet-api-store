@@ -1,3 +1,36 @@
+//! # Core Module
+//!
+//! This module contains the foundational logic and business rules for the DuxNet platform.
+//! It aggregates and exposes submodules for identity, DHT, reputation, escrow, tasks, messaging, community fund, and shared data structures.
+//!
+//! ## Purpose
+//! - Implements the main node struct (`DuxNetNode`) and orchestrates all core platform features.
+//! - Provides abstractions for decentralized identity, distributed storage, reputation, escrow, task engine, and messaging.
+//! - Serves as the backbone for all higher-level modules (API, wallet, network, frontend).
+//!
+//! ## Submodules
+//! - `identity`: Digital identity management (DID, keys)
+//! - `dht`: Distributed hash table for peer discovery/storage
+//! - `reputation`: Reputation system and attestations
+//! - `escrow`: Multi-signature escrow contracts
+//! - `tasks`: Distributed task engine
+//! - `messaging`: Messaging and communication
+//! - `community_fund`: Community fund logic
+//! - `data_structures`: Shared types and data models
+//!
+//! ## Best Practices
+//! - Keep each submodule focused and well-documented.
+//! - Use clear, consistent naming for structs and methods.
+//! - Delegate business logic to the appropriate submodule.
+//! - Add doc comments to all public types and functions.
+//! - If the core grows, consider further splitting into feature-specific submodules.
+//!
+//! ## Future Improvements
+//! - Add more granular error types for better error handling.
+//! - Expand test coverage for all core features.
+//! - Document cross-module interactions and data flows.
+//!
+//! This structure ensures the core logic is robust, maintainable, and easy to extend as the platform evolves.
 pub mod data_structures;
 pub mod dht;
 pub mod identity;
@@ -21,6 +54,8 @@ use tasks::TaskEngine;
 use community_fund::CommunityFundManager;
 use messaging::MessagingSystem;
 use crate::network::P2PNetwork;
+use crate::network::p2p::DuxP2PNode;
+use tokio::sync::mpsc;
 
 #[derive(Clone)]
 pub struct DuxNetNode {
@@ -35,6 +70,12 @@ pub struct DuxNetNode {
     pub network: Arc<P2PNetwork>,
     pub wallet: Arc<RwLock<crate::wallet::Wallet>>,
     pub is_running: Arc<RwLock<bool>>,
+    pub p2p_node: Option<DuxP2PNode>,
+    pub p2p_tx: Option<mpsc::UnboundedSender<Vec<u8>>>,
+    pub task_rx: Option<mpsc::UnboundedReceiver<Task>>,
+    pub service_rx: Option<mpsc::UnboundedReceiver<ServiceMetadata>>,
+    pub rep_rx: Option<mpsc::UnboundedReceiver<ReputationAttestation>>,
+    pub msg_rx: Option<mpsc::UnboundedReceiver<Message>>,
 }
 
 impl DuxNetNode {
@@ -53,6 +94,22 @@ impl DuxNetNode {
         let wallet = Arc::new(RwLock::new(crate::wallet::Wallet::new(did_manager.did.id.clone())?));
         let is_running = Arc::new(RwLock::new(false));
         
+        // Set up mpsc channels for each message type
+        let (task_tx, task_rx) = mpsc::unbounded_channel();
+        let (service_tx, service_rx) = mpsc::unbounded_channel();
+        let (rep_tx, rep_rx) = mpsc::unbounded_channel();
+        let (msg_tx, msg_rx) = mpsc::unbounded_channel();
+        // Set up libp2p P2P node and channel
+        let (p2p_tx, p2p_rx) = mpsc::unbounded_channel();
+        let p2p_node = DuxP2PNode::new_with_channels(task_tx, service_tx, rep_tx, msg_tx).await.ok();
+        if let Some(node) = &p2p_node {
+            let node_clone = node.clone();
+            tokio::spawn(async move {
+                // Start the P2P event loop
+                let _ = node_clone.start(p2p_rx).await;
+            });
+        }
+
         Ok(DuxNetNode {
             node_id,
             did_manager,
@@ -65,6 +122,12 @@ impl DuxNetNode {
             network,
             wallet,
             is_running,
+            p2p_node,
+            p2p_tx: Some(p2p_tx),
+            task_rx: Some(task_rx),
+            service_rx: Some(service_rx),
+            rep_rx: Some(rep_rx),
+            msg_rx: Some(msg_rx),
         })
     }
 

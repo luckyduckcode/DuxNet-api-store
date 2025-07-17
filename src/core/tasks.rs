@@ -60,117 +60,57 @@ impl TaskEngine {
     }
 
     pub async fn process_task(&self, task: Task, processor_did: String) -> Result<TaskResult> {
-        // Simulate task processing
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        
-        // Generate mock result and proof
-        let result_data = format!("Processed task {} by {}", task.id.0, processor_did);
-        let proof = self.generate_proof(&task, &result_data);
+        // 1. Deserialize payload (assume JSON for this example)
+        let params: serde_json::Value = serde_json::from_slice(&task.payload)?;
+
+        // 2. Route to the correct service handler
+        let result_data = match task.service_id.0.as_str() {
+            "text-processing" => process_text(params).await?,
+            "image-analysis" => process_image(params).await?,
+            "data-computation" => process_data(params).await?,
+            "ml-training" => process_ml(params).await?,
+            _ => return Err(anyhow::anyhow!("Unknown service")),
+        };
+
+        // 3. Sign/hash the result
+        let proof = sign_result(&result_data);
         
         Ok(TaskResult {
             task_id: task.id,
             processor_did,
-            result: result_data.into_bytes(),
+            result: serde_json::to_vec(&result_data)?,
             proof,
             completed_at: get_current_timestamp(),
         })
     }
+}
 
-    fn generate_proof(&self, task: &Task, result: &str) -> Vec<u8> {
-        use sha2::{Sha256, Digest};
-        let mut hasher = Sha256::new();
-        hasher.update(&task.payload);
-        hasher.update(result.as_bytes());
-        hasher.finalize().to_vec()
-    }
+// --- Service handler scaffolds ---
+async fn process_text(params: serde_json::Value) -> Result<serde_json::Value> {
+    // TODO: Implement real text processing (e.g., sentiment analysis)
+    Ok(serde_json::json!({"result": "text processed", "params": params}))
+}
 
-    pub async fn get_pending_tasks(&self) -> Vec<Task> {
-        let pending = self.pending_tasks.read().await;
-        pending.values().cloned().collect()
-    }
+async fn process_image(params: serde_json::Value) -> Result<serde_json::Value> {
+    // TODO: Implement real image analysis
+    Ok(serde_json::json!({"result": "image analyzed", "params": params}))
+}
 
-    pub async fn get_completed_tasks(&self) -> Vec<TaskResult> {
-        let completed = self.completed_tasks.read().await;
-        completed.values().cloned().collect()
-    }
+async fn process_data(params: serde_json::Value) -> Result<serde_json::Value> {
+    // TODO: Implement real data computation
+    Ok(serde_json::json!({"result": "data computed", "params": params}))
+}
 
-    pub async fn get_processing_tasks(&self) -> Vec<(TaskId, String)> {
-        let processing = self.processing_tasks.read().await;
-        processing.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
-    }
+async fn process_ml(params: serde_json::Value) -> Result<serde_json::Value> {
+    // TODO: Implement real ML model training/inference
+    Ok(serde_json::json!({"result": "ml processed", "params": params}))
+}
 
-    pub async fn get_task_status(&self, task_id: &TaskId) -> TaskStatus {
-        let pending = self.pending_tasks.read().await;
-        let completed = self.completed_tasks.read().await;
-        let processing = self.processing_tasks.read().await;
-        
-        if pending.contains_key(task_id) {
-            TaskStatus::Pending
-        } else if processing.contains_key(task_id) {
-            TaskStatus::Processing
-        } else if completed.contains_key(task_id) {
-            TaskStatus::Completed
-        } else {
-            TaskStatus::NotFound
-        }
-    }
-
-    pub async fn process_pending_tasks(&self) -> Result<()> {
-        let pending_tasks = self.get_pending_tasks().await;
-        
-        for task in pending_tasks {
-            // In a real implementation, this would be distributed to available processors
-            // For now, we'll just simulate processing
-            let processor_did = "did:duxnet:processor".to_string();
-            
-            if let Some(task) = self.accept_task(&task.id, processor_did.clone()).await {
-                let result = self.process_task(task, processor_did).await?;
-                self.complete_task(result).await?;
-            }
-        }
-        
-        // Check for community fund distribution
-        self.check_community_fund_distribution().await?;
-        
-        Ok(())
-    }
-
-    async fn check_community_fund_distribution(&self) -> Result<()> {
-        if let Some(cf_manager) = &self.community_fund_manager {
-            for currency in [Currency::BTC, Currency::ETH, Currency::USDC, Currency::LTC, Currency::XMR, Currency::DOGE] {
-                if cf_manager.should_distribute(&currency).await {
-                    info!("Scheduling community fund distribution for {}", currency.symbol());
-                    
-                    match cf_manager.distribute_fund(currency).await {
-                        Ok(distribution) => {
-                            info!("Community fund distribution completed for {}: {} to {} users", 
-                                  distribution.currency.symbol(),
-                                  distribution.currency.format_amount(distribution.amount_per_user),
-                                  distribution.total_users);
-                        },
-                        Err(e) => {
-                            error!("Failed to distribute community fund for {}: {}", currency.symbol(), e);
-                        }
-                    }
-                }
-            }
-        }
-        
-        Ok(())
-    }
-
-    pub async fn get_stats(&self) -> TaskStats {
-        let pending = self.pending_tasks.read().await;
-        let completed = self.completed_tasks.read().await;
-        let processing = self.processing_tasks.read().await;
-        
-        TaskStats {
-            pending_count: pending.len(),
-            processing_count: processing.len(),
-            completed_count: completed.len(),
-            total_tasks: pending.len() + processing.len() + completed.len(),
-        }
-    }
+fn sign_result(result: &serde_json::Value) -> Vec<u8> {
+    use sha2::{Sha256, Digest};
+    let mut hasher = Sha256::new();
+    hasher.update(serde_json::to_vec(result).unwrap_or_default());
+    hasher.finalize().to_vec()
 }
 
 #[derive(Debug, Clone, PartialEq)]
