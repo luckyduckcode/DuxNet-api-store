@@ -207,6 +207,24 @@ impl DuxNetNode {
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
                 .as_secs(),
+            // Enhanced fields with defaults
+            categories: vec!["Other".to_string()],
+            tags: vec![],
+            sla: ServiceSLA {
+                uptime_guarantee: 99.0,
+                max_response_time_ms: 5000,
+                support_response_hours: 24,
+                refund_policy: RefundPolicy::PartialRefund { percentage: 50.0 },
+                availability_zones: vec!["global".to_string()],
+            },
+            version: "1.0.0".to_string(),
+            documentation_url: None,
+            status: ServiceStatus::Active,
+            uptime_percentage: 100.0,
+            response_time_ms: 100,
+            rate_limit_per_minute: 1000,
+            supported_formats: vec!["JSON".to_string()],
+            examples: vec![],
         };
         
         self.dht.announce_service(&service).await?;
@@ -214,8 +232,108 @@ impl DuxNetNode {
         Ok(service_id)
     }
 
+    // Enhanced service registration with full metadata
+    pub async fn register_service_enhanced(&self, request: RegisterServiceRequest) -> Result<ServiceId> {
+        let service_id = ServiceId(uuid::Uuid::new_v4().to_string());
+        let service = ServiceMetadata {
+            id: service_id.clone(),
+            provider_did: self.did_manager.did.id.clone(),
+            name: request.name,
+            description: request.description,
+            endpoint: self.did_manager.did.endpoints[0].clone(),
+            price: request.price,
+            reputation_score: self.reputation_system.get_reputation(&self.did_manager.did.id).await,
+            last_updated: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+            categories: request.categories,
+            tags: request.tags,
+            sla: request.sla,
+            version: request.version,
+            documentation_url: request.documentation_url,
+            status: ServiceStatus::Active,
+            uptime_percentage: 100.0,
+            response_time_ms: 100,
+            rate_limit_per_minute: request.rate_limit_per_minute,
+            supported_formats: request.supported_formats,
+            examples: request.examples,
+        };
+        
+        self.dht.announce_service(&service).await?;
+        info!("Registered enhanced service: {} with {} categories", service_id.0, service.categories.len());
+        Ok(service_id)
+    }
+
     pub async fn find_services(&self, query: &str) -> Vec<ServiceMetadata> {
         self.dht.find_services(query).await
+    }
+
+    // Enhanced service search with filters and sorting
+    pub async fn find_services_enhanced(&self, request: &FindServicesRequest) -> Vec<ServiceMetadata> {
+        let mut services = self.dht.find_services(&request.query).await;
+        
+        // Apply filters
+        if let Some(categories) = &request.categories {
+            services.retain(|service| {
+                service.categories.iter().any(|cat| categories.contains(cat))
+            });
+        }
+        
+        if let Some(min_rating) = request.min_rating {
+            services.retain(|service| service.reputation_score >= min_rating);
+        }
+        
+        if let Some(max_price) = request.max_price {
+            services.retain(|service| service.price <= max_price);
+        }
+        
+        if let Some(status) = &request.status {
+            services.retain(|service| std::mem::discriminant(&service.status) == std::mem::discriminant(status));
+        }
+        
+        // Apply sorting
+        if let Some(sort_by) = &request.sort_by {
+            match sort_by {
+                ServiceSortBy::Name => services.sort_by(|a, b| a.name.cmp(&b.name)),
+                ServiceSortBy::Price => services.sort_by(|a, b| a.price.cmp(&b.price)),
+                ServiceSortBy::Rating => services.sort_by(|a, b| b.reputation_score.partial_cmp(&a.reputation_score).unwrap()),
+                ServiceSortBy::Uptime => services.sort_by(|a, b| b.uptime_percentage.partial_cmp(&a.uptime_percentage).unwrap()),
+                ServiceSortBy::ResponseTime => services.sort_by(|a, b| a.response_time_ms.cmp(&b.response_time_ms)),
+                ServiceSortBy::Popularity => services.sort_by(|a, b| b.reputation_score.partial_cmp(&a.reputation_score).unwrap()),
+                ServiceSortBy::Newest => services.sort_by(|a, b| b.last_updated.cmp(&a.last_updated)),
+            }
+        }
+        
+        services
+    }
+
+    // Get detailed service information
+    pub async fn get_service_details(&self, service_id: &str) -> Result<ServiceMetadata> {
+        let services = self.dht.find_services(service_id).await;
+        services.into_iter()
+            .find(|service| service.id.0 == service_id)
+            .ok_or_else(|| anyhow::anyhow!("Service not found: {}", service_id))
+    }
+
+    // Update service information
+    pub async fn update_service(&self, service_id: &str, updates: ServiceMetadata) -> Result<()> {
+        // Verify ownership
+        if updates.provider_did != self.did_manager.did.id {
+            return Err(anyhow::anyhow!("Not authorized to update this service"));
+        }
+        
+        // Update the service in DHT
+        self.dht.announce_service(&updates).await?;
+        info!("Updated service: {}", service_id);
+        Ok(())
+    }
+
+    // Delete service
+    pub async fn delete_service(&self, service_id: &str) -> Result<()> {
+        // In a real implementation, you'd mark it as deleted or remove from DHT
+        info!("Service deletion requested: {}", service_id);
+        Ok(())
     }
 
     // Escrow management

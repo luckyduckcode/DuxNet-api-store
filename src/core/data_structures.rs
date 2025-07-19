@@ -32,6 +32,77 @@ pub struct ServiceMetadata {
     pub price: u64,
     pub reputation_score: f64,
     pub last_updated: u64,
+    // Enhanced fields for API store
+    pub categories: Vec<String>,
+    pub tags: Vec<String>,
+    pub sla: ServiceSLA,
+    pub version: String,
+    pub documentation_url: Option<String>,
+    pub status: ServiceStatus,
+    pub uptime_percentage: f64,
+    pub response_time_ms: u64,
+    pub rate_limit_per_minute: u64,
+    pub supported_formats: Vec<String>,
+    pub examples: Vec<ServiceExample>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServiceSLA {
+    pub uptime_guarantee: f64, // percentage
+    pub max_response_time_ms: u64,
+    pub support_response_hours: u64,
+    pub refund_policy: RefundPolicy,
+    pub availability_zones: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum RefundPolicy {
+    NoRefund,
+    PartialRefund { percentage: f64 },
+    FullRefund,
+    ConditionalRefund { conditions: String },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ServiceStatus {
+    Active,
+    Maintenance,
+    Deprecated,
+    Beta,
+    Alpha,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServiceExample {
+    pub name: String,
+    pub description: String,
+    pub request: String,
+    pub response: String,
+    pub language: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServiceReview {
+    pub id: String,
+    pub service_id: String,
+    pub reviewer_did: String,
+    pub rating: u8, // 1-5 stars
+    pub comment: String,
+    pub timestamp: u64,
+    pub helpful_votes: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServiceMetrics {
+    pub service_id: String,
+    pub total_requests: u64,
+    pub successful_requests: u64,
+    pub failed_requests: u64,
+    pub average_response_time_ms: f64,
+    pub uptime_percentage: f64,
+    pub total_revenue: u64,
+    pub unique_users: u64,
+    pub last_updated: u64,
 }
 
 // Reputation system
@@ -177,12 +248,20 @@ pub enum NetworkMessage {
     Pong,
 }
 
-// API request/response structures
+// Enhanced API request/response structures
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegisterServiceRequest {
     pub name: String,
     pub description: String,
     pub price: u64,
+    pub categories: Vec<String>,
+    pub tags: Vec<String>,
+    pub sla: ServiceSLA,
+    pub version: String,
+    pub documentation_url: Option<String>,
+    pub rate_limit_per_minute: u64,
+    pub supported_formats: Vec<String>,
+    pub examples: Vec<ServiceExample>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -190,18 +269,49 @@ pub struct RegisterServiceResponse {
     pub service_id: String,
     pub success: bool,
     pub message: String,
+    pub api_key: Option<String>, // API key for the service
+    pub documentation_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FindServicesRequest {
     pub query: String,
+    pub categories: Option<Vec<String>>,
+    pub min_rating: Option<f64>,
+    pub max_price: Option<u64>,
+    pub status: Option<ServiceStatus>,
+    pub sort_by: Option<ServiceSortBy>,
+    pub limit: Option<u32>,
+    pub offset: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ServiceSortBy {
+    Name,
+    Price,
+    Rating,
+    Uptime,
+    ResponseTime,
+    Popularity,
+    Newest,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FindServicesResponse {
     pub services: Vec<ServiceMetadata>,
+    pub total_count: u64,
     pub success: bool,
     pub message: String,
+    pub pagination: PaginationInfo,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PaginationInfo {
+    pub current_page: u32,
+    pub total_pages: u32,
+    pub items_per_page: u32,
+    pub has_next: bool,
+    pub has_previous: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -211,13 +321,16 @@ pub struct SubmitTaskRequest {
     pub cpu_cores: u32,
     pub memory_mb: u32,
     pub timeout_seconds: u32,
+    pub priority: TaskPriority,
+    pub callback_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubmitTaskResponse {
-    pub task_id: String,
-    pub success: bool,
-    pub message: String,
+pub enum TaskPriority {
+    Low,
+    Normal,
+    High,
+    Critical,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

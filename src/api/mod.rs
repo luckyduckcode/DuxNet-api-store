@@ -14,12 +14,20 @@ use tracing::info;
 pub async fn start_api_server(port: u16) -> Result<(), Box<dyn std::error::Error>> {
     info!("Starting API server on port {}", port);
     let node = std::sync::Arc::new(crate::core::DuxNetNode::new(8080).await?);
-    // TODO: Load API keys from secure storage or config
-    let api_keys = std::sync::Arc::new(HashMap::new());
-    let state = ApiState { node, api_keys };
+    
+    // Initialize API keys (in production, load from secure storage)
+    let mut api_keys = HashMap::new();
+    api_keys.insert("demo-api-key-123".to_string(), "did:duxnet:demo-user".to_string());
+    api_keys.insert("admin-api-key-456".to_string(), "did:duxnet:admin".to_string());
+    api_keys.insert("service-api-key-789".to_string(), "did:duxnet:service-provider".to_string());
+    
+    let state = ApiState::new(node, std::sync::Arc::new(api_keys));
     let app = create_router(state);
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)).await?;
     info!("API server listening on port {}", port);
+    info!("🔑 Demo API Keys: demo-api-key-123, admin-api-key-456, service-api-key-789");
+    info!("📊 Analytics available at: http://localhost:{}/api/analytics/usage", port);
+    info!("👨‍💻 Developer portal at: http://localhost:{}/api/developer/dashboard", port);
     axum::serve(listener, app).await?;
     Ok(())
 } 
