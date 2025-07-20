@@ -94,7 +94,7 @@ impl DuxCoinAPI {
             return Err(anyhow::anyhow!("RPC call failed: {}", response.status()));
         }
 
-        let response_text = response.text().await?;
+        let response_text = response.text().await?.to_string();
         let api_response: DuxAPIResponse<T> = serde_json::from_str(&response_text)?;
 
         if let Some(error) = api_response.error {

@@ -1,0 +1,5 @@
+#!/bin/bash
+HERE="$(dirname "$(readlink -f "$0")")"
+"$HERE/usr/bin/duxnet" &
+xdg-open "$HERE/usr/bin/static/index.html"
+wait 

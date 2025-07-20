@@ -1,15 +1,18 @@
 {
-  "name": "duxnet-wallet",
+  "name": "duxnet-api-store",
   "private": true,
   "version": "0.1.0",
   "type": "module",
   "scripts": {
     "build": "tauri build",
     "build-appimage": "tauri build --target appimage",
+    "build-linux": "tauri build --target x86_64-unknown-linux-gnu",
     "dev": "tauri dev",
-    "preview": "tauri dev"
+    "preview": "tauri dev",
+    "clean": "rm -rf src-tauri/target",
+    "start-api": "cd .. && cargo run --release"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.0.0-rc.18"
+    "@tauri-apps/cli": "^2.6.2"
   }
 }

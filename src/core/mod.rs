@@ -53,11 +53,10 @@ use escrow::EscrowManager;
 use tasks::TaskEngine;
 use community_fund::CommunityFundManager;
 use messaging::MessagingSystem;
-use crate::network::P2PNetwork;
-use crate::network::p2p::DuxP2PNode;
-use tokio::sync::mpsc;
 
-#[derive(Clone)]
+// Add a constant for the platform escrow DuxCoin address
+const ESCROW_DUXCOIN_ADDRESS: &str = "<YOUR_ESCROW_DUXCOIN_ADDRESS_HERE>"; // Replace with your real address
+
 pub struct DuxNetNode {
     pub node_id: NodeId,
     pub did_manager: DIDManager,
@@ -67,21 +66,14 @@ pub struct DuxNetNode {
     pub task_engine: TaskEngine,
     pub community_fund_manager: Arc<CommunityFundManager>,
     pub messaging_system: Arc<MessagingSystem>,
-    pub network: Arc<P2PNetwork>,
     pub wallet: Arc<RwLock<crate::wallet::Wallet>>,
     pub is_running: Arc<RwLock<bool>>,
-    pub p2p_node: Option<DuxP2PNode>,
-    pub p2p_tx: Option<mpsc::UnboundedSender<Vec<u8>>>,
-    pub task_rx: Option<mpsc::UnboundedReceiver<Task>>,
-    pub service_rx: Option<mpsc::UnboundedReceiver<ServiceMetadata>>,
-    pub rep_rx: Option<mpsc::UnboundedReceiver<ReputationAttestation>>,
-    pub msg_rx: Option<mpsc::UnboundedReceiver<Message>>,
 }
 
 impl DuxNetNode {
-    pub async fn new(port: u16) -> Result<Self> {
+    pub async fn new() -> Result<Self> {
         let node_id = NodeId(uuid::Uuid::new_v4().to_string());
-        let endpoints = vec![format!("tcp://127.0.0.1:{}", port)];
+        let endpoints = vec!["http://localhost:8081".to_string()];
         
         let did_manager = DIDManager::new(endpoints);
         let dht = DHT::new(node_id.clone());
@@ -90,25 +82,8 @@ impl DuxNetNode {
         let community_fund_manager = Arc::new(CommunityFundManager::new(Arc::new(dht.clone())));
         let task_engine = TaskEngine::new().with_community_fund_manager(community_fund_manager.clone());
         let messaging_system = Arc::new(MessagingSystem::new(did_manager.clone()));
-        let network = Arc::new(P2PNetwork::new(port).await?);
         let wallet = Arc::new(RwLock::new(crate::wallet::Wallet::new(did_manager.did.id.clone())?));
         let is_running = Arc::new(RwLock::new(false));
-        
-        // Set up mpsc channels for each message type
-        let (task_tx, task_rx) = mpsc::unbounded_channel();
-        let (service_tx, service_rx) = mpsc::unbounded_channel();
-        let (rep_tx, rep_rx) = mpsc::unbounded_channel();
-        let (msg_tx, msg_rx) = mpsc::unbounded_channel();
-        // Set up libp2p P2P node and channel
-        let (p2p_tx, p2p_rx) = mpsc::unbounded_channel();
-        let p2p_node = DuxP2PNode::new_with_channels(task_tx, service_tx, rep_tx, msg_tx).await.ok();
-        if let Some(node) = &p2p_node {
-            let node_clone = node.clone();
-            tokio::spawn(async move {
-                // Start the P2P event loop
-                let _ = node_clone.start(p2p_rx).await;
-            });
-        }
 
         Ok(DuxNetNode {
             node_id,
@@ -119,58 +94,18 @@ impl DuxNetNode {
             task_engine,
             community_fund_manager,
             messaging_system,
-            network,
             wallet,
             is_running,
-            p2p_node,
-            p2p_tx: Some(p2p_tx),
-            task_rx: Some(task_rx),
-            service_rx: Some(service_rx),
-            rep_rx: Some(rep_rx),
-            msg_rx: Some(msg_rx),
         })
     }
 
-    pub async fn start(&mut self) -> Result<()> {
+    pub async fn start(&self) -> Result<()> {
         info!("Starting DuxNet node: {}", self.node_id.0);
-        
-        // Start the P2P network
-        self.network.start().await?;
         
         // Mark as running
         {
             let mut running = self.is_running.write().await;
             *running = true;
-        }
-        
-        // Start the main event loop
-        self.event_loop().await?;
-        
-        Ok(())
-    }
-
-    async fn event_loop(&self) -> Result<()> {
-        loop {
-            // Check if we should stop
-            {
-                let running = self.is_running.read().await;
-                if !*running {
-                    break;
-                }
-            }
-            
-            // Process network events
-            if let Err(e) = self.network.process_events().await {
-                error!("Network event processing error: {}", e);
-            }
-            
-            // Process pending tasks
-            if let Err(e) = self.task_engine.process_pending_tasks().await {
-                error!("Task processing error: {}", e);
-            }
-            
-            // Sleep briefly to prevent busy waiting
-            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
         }
         
         Ok(())
@@ -184,9 +119,6 @@ impl DuxNetNode {
             let mut running = self.is_running.write().await;
             *running = false;
         }
-        
-        // Stop the network
-        self.network.stop().await?;
         
         Ok(())
     }
@@ -355,13 +287,28 @@ impl DuxNetNode {
         Ok(escrow_id)
     }
 
-    // Task management
-    pub async fn submit_task(&self, service_id: ServiceId, payload: Vec<u8>, 
-                             requirements: TaskRequirements) -> Result<TaskId> {
+    /// Submit a task with escrow-based DuxCoin payment
+    pub async fn submit_task_with_escrow(&self, service_id: ServiceId, payload: Vec<u8>, requirements: TaskRequirements, buyer_address: String) -> Result<TaskId> {
+        // 1. Lookup the service
+        let service = self.get_service_details(&service_id.0).await?;
+        let price = service.price as f64 / 100_000_000.0; // Convert to DUX
+        let provider_address = service.endpoint.clone(); // Or use a dedicated provider DuxCoin address field
+
+        // 2. Send DuxCoin from buyer to escrow address
+        // (Assume buyer_address is managed by the platform for now)
+        let txid = crate::api::handlers::DUXCOIN_API.send_dux(&buyer_address, ESCROW_DUXCOIN_ADDRESS, price).await?;
+
+        // 3. Create escrow contract (record txid, buyer, provider, amount, etc.)
+        // (You may want to expand this with more escrow logic)
+        let escrow_id = format!("escrow-{}", uuid::Uuid::new_v4());
+        // For now, just log it
+        tracing::info!("Created escrow {} for service {}: buyer {} -> escrow {} (txid {})", escrow_id, service_id.0, buyer_address, ESCROW_DUXCOIN_ADDRESS, txid);
+
+        // 4. Create the task, linking to the escrow
         let task_id = TaskId(uuid::Uuid::new_v4().to_string());
         let task = Task {
             id: task_id.clone(),
-            escrow_id: "".to_string(), // Will be set when escrow is created
+            escrow_id: escrow_id.clone(),
             service_id,
             payload,
             requirements,
@@ -370,10 +317,17 @@ impl DuxNetNode {
                 .unwrap()
                 .as_secs(),
         };
-        
         self.task_engine.submit_task(task).await?;
-        info!("Submitted task: {}", task_id.0);
+        tracing::info!("Submitted task {} with escrow {}", task_id.0, escrow_id);
         Ok(task_id)
+    }
+
+    /// Release escrow funds to provider on task completion
+    pub async fn release_escrow_to_provider(&self, provider_address: String, amount: u64) -> Result<String> {
+        let amount_dux = amount as f64 / 100_000_000.0;
+        let txid = crate::api::handlers::DUXCOIN_API.send_dux(ESCROW_DUXCOIN_ADDRESS, &provider_address, amount_dux).await?;
+        tracing::info!("Released {} DUX from escrow to provider {} (txid {})", amount_dux, provider_address, txid);
+        Ok(txid)
     }
 
     // Reputation management

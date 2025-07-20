@@ -261,13 +261,13 @@ impl Wallet {
     fn generate_address(currency: &Currency, public_key: &VerifyingKey) -> String {
         let pub_bytes = public_key.to_bytes();
         match currency {
-            Currency::BTC => format!("1{}", hex::encode(&pub_bytes[..20])),
-            Currency::ETH => format!("0x{}", hex::encode(&pub_bytes[..20])),
-            Currency::USDC => format!("0x{}", hex::encode(&pub_bytes[..20])), // Same as ETH
-            Currency::LTC => format!("L{}", hex::encode(&pub_bytes[..20])),
-            Currency::XMR => format!("4{}", hex::encode(&pub_bytes[..32])),
-            Currency::DOGE => format!("D{}", hex::encode(&pub_bytes[..20])),
-            Currency::DUX => format!("D{}", hex::encode(&pub_bytes[..20])), // DUX addresses start with 'D'
+            &Currency::BTC => format!("1{}", hex::encode(&pub_bytes[..20])),
+            &Currency::ETH => format!("0x{}", hex::encode(&pub_bytes[..20])),
+            &Currency::USDC => format!("0x{}", hex::encode(&pub_bytes[..20])), // Same as ETH
+            &Currency::LTC => format!("L{}", hex::encode(&pub_bytes[..20])),
+            &Currency::XMR => format!("4{}", hex::encode(&pub_bytes[..32])),
+            &Currency::DOGE => format!("D{}", hex::encode(&pub_bytes[..20])),
+            &Currency::DUX => format!("D{}", hex::encode(&pub_bytes[..20])), // DUX addresses start with 'D'
         }
     }
     
@@ -453,13 +453,13 @@ impl Wallet {
     pub fn calculate_fee(&self, currency: &Currency) -> u64 {
         // Simplified fee calculation (in real app, this would be dynamic)
         match currency {
-            Currency::BTC => 1000, // 0.00001 BTC
-            Currency::ETH => 21000000000000000, // 0.021 ETH
-            Currency::USDC => 100000, // 0.1 USDC
-            Currency::LTC => 10000, // 0.0001 LTC
-            Currency::XMR => 1000000000, // 0.001 XMR
-            Currency::DOGE => 1000000, // 0.01 DOGE
-            Currency::DUX => 500000, // 0.005 DUX (low fees for API usage)
+            &Currency::BTC => 1000, // 0.00001 BTC
+            &Currency::ETH => 21000000000000000, // 0.021 ETH
+            &Currency::USDC => 100000, // 0.1 USDC
+            &Currency::LTC => 10000, // 0.0001 LTC
+            &Currency::XMR => 1000000000, // 0.001 XMR
+            &Currency::DOGE => 1000000, // 0.01 DOGE
+            &Currency::DUX => 500000, // 0.005 DUX (low fees for API usage)
         }
     }
     

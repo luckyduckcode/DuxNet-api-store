@@ -28,86 +28,33 @@
 //!
 //! This structure makes it easy to add, test, and maintain API endpoints as the platform evolves. 
 
-use axum::{extract::State, response::IntoResponse};
-use crate::api::state::ApiState;
-use axum::Json;
-use axum::{http::Request, http::StatusCode, middleware::Next, response::Response};
-use std::sync::Arc;
+use axum::{
+    extract::State,
+    http::{Request, Response, StatusCode},
+    response::{IntoResponse, Json},
+};
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
+use crate::api::state::ApiState;
+use crate::core::data_structures::*;
+use tracing::{info, warn};
+use crate::api::dux_coin::{DuxCoinAPI, DuxNetworkInfo};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
-/// Authentication middleware for API key validation
-pub async fn auth_middleware<B>(
-    State(state): State<ApiState>,
-    req: Request<B>,
-    next: Next<B>,
-) -> Result<Response, StatusCode> {
-    let start_time = SystemTime::now();
-    let path = req.uri().path();
-    let user_agent = req.headers()
-        .get("User-Agent")
-        .and_then(|h| h.to_str().ok())
-        .unwrap_or("Unknown")
-        .to_string();
-    
-    // Allow unauthenticated access to public endpoints
-    if path == "/api/status" || path == "/api/version" || path == "/" || path == "/index.html" {
-        return Ok(next.run(req).await);
-    }
-    
-    // Check Authorization header
-    let api_key = if let Some(auth_header) = req.headers().get("Authorization") {
-        if let Ok(auth_str) = auth_header.to_str() {
-            if let Some(key) = auth_str.strip_prefix("Bearer ") {
-                key
-            } else {
-                return Err(StatusCode::UNAUTHORIZED);
-            }
-        } else {
-            return Err(StatusCode::UNAUTHORIZED);
-        }
-    } else {
-        return Err(StatusCode::UNAUTHORIZED);
-    };
-    
-    // Check rate limiting
-    if !state.check_rate_limit(api_key).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)? {
-        return Err(StatusCode::TOO_MANY_REQUESTS);
-    }
-    
-    // Check if API key exists
-    if !state.api_keys.contains_key(api_key) {
-        return Err(StatusCode::UNAUTHORIZED);
-    }
-    
-    // Track usage
-    let response = next.run(req).await;
-    let response_time = start_time.elapsed().unwrap().as_millis() as u64;
-    
-    // Extract IP address (simplified)
-    let ip_address = "127.0.0.1".to_string(); // In production, extract from request
-    
-    let usage = crate::api::state::ApiUsage {
-        api_key: api_key.to_string(),
-        endpoint: path.to_string(),
-        timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
-        response_time,
-        status_code: response.status().as_u16(),
-        user_agent,
-        ip_address,
-    };
-    
-    state.track_usage(usage).await;
-    
-    Ok(response)
+lazy_static::lazy_static! {
+    static ref DUXCOIN_API: Arc<DuxCoinAPI> = Arc::new(DuxCoinAPI::new(
+        "http://localhost:8332".to_string(), // Adjust to your DuxCoin daemon RPC URL
+        "rpcuser".to_string(),                // Adjust to your DuxCoin RPC username
+        "rpcpassword".to_string()             // Adjust to your DuxCoin RPC password
+    ));
 }
 
 /// Handles GET /api/status
 pub async fn get_status(State(state): State<ApiState>) -> impl IntoResponse {
     let node = &state.node;
     let reputation = node.reputation_system.get_reputation(&node.did_manager.did.id).await;
-    let peers = node.network.get_peers().await;
     
     let status = crate::core::data_structures::NodeStatus {
         node_id: node.node_id.0.clone(),
@@ -116,7 +63,7 @@ pub async fn get_status(State(state): State<ApiState>) -> impl IntoResponse {
         uptime_seconds: 0, // TODO: implement uptime tracking
         services_count: 0,  // TODO: implement service counting
         reputation_score: reputation,
-        peers_count: peers.len(),
+        peers_count: 0, // No P2P network in simplified version
     };
     Json(status)
 }
@@ -166,14 +113,17 @@ pub async fn register_service(
     // Generate API key for the service
     let service_api_key = format!("srv_{}", Uuid::new_v4().to_string().replace("-", ""));
     
-    match node.register_service_enhanced(request).await {
-        Ok(service_id) => Json(crate::core::data_structures::RegisterServiceResponse {
-            service_id: service_id.0,
-            success: true,
-            message: "Service registered successfully".to_string(),
-            api_key: Some(service_api_key),
-            documentation_url: Some(format!("http://localhost:8081/docs/services/{}", service_id.0)),
-        }),
+            match node.register_service_enhanced(request).await {
+            Ok(service_id) => {
+                let service_id_str = service_id.0.clone();
+                Json(crate::core::data_structures::RegisterServiceResponse {
+                    service_id: service_id_str.clone(),
+                    success: true,
+                    message: "Service registered successfully".to_string(),
+                    api_key: Some(service_api_key),
+                    documentation_url: Some(format!("http://localhost:8081/docs/services/{}", service_id_str)),
+                })
+            },
         Err(e) => {
             tracing::error!("Failed to register service: {}", e);
             Json(crate::core::data_structures::RegisterServiceResponse {
@@ -287,7 +237,7 @@ pub async fn get_trending_services(State(state): State<ApiState>) -> impl IntoRe
                 "service_id": service_id,
                 "total_requests": stats.total_requests,
                 "revenue": stats.total_revenue,
-                "uptime": stats.uptime_percentage
+                "uptime": 100.0 // Default uptime for now
             })
         })
         .collect();
@@ -450,9 +400,70 @@ pub async fn get_billing_info() -> impl IntoResponse { Json(serde_json::json!({"
 // Existing handlers (keeping placeholders for now)
 pub async fn register_service_old() -> impl IntoResponse { Json(serde_json::json!({"success": false, "message": "Use enhanced endpoint"})) }
 pub async fn search_services_old() -> impl IntoResponse { Json(serde_json::json!({"success": false, "message": "Use enhanced endpoint"})) }
-pub async fn submit_task() -> impl IntoResponse { Json(serde_json::json!({"success": false, "message": "Not implemented yet"})) }
-pub async fn create_escrow() -> impl IntoResponse { Json(serde_json::json!({"success": false, "message": "Not implemented yet"})) }
-pub async fn get_reputation() -> impl IntoResponse { Json(serde_json::json!({"success": false, "message": "Not implemented yet"})) }
+
+/// Handles POST /api/tasks/submit (with escrow payment)
+pub async fn submit_task(State(state): State<ApiState>, Json(payload): Json<serde_json::Value>) -> impl IntoResponse {
+    let node = &state.node;
+    let service_id = payload.get("service_id").and_then(|v| v.as_str()).unwrap_or("");
+    let buyer_address = payload.get("buyer_address").and_then(|v| v.as_str()).unwrap_or("");
+    let requirements = TaskRequirements {
+        cpu_cores: payload.get("cpu_cores").and_then(|v| v.as_u64()).unwrap_or(1) as u32,
+        memory_mb: payload.get("memory_mb").and_then(|v| v.as_u64()).unwrap_or(512) as u32,
+        timeout_seconds: payload.get("timeout_seconds").and_then(|v| v.as_u64()).unwrap_or(60) as u32,
+    };
+    let task_payload = payload.get("payload").and_then(|v| v.as_str()).unwrap_or("").as_bytes().to_vec();
+    if service_id.is_empty() || buyer_address.is_empty() {
+        return Json(serde_json::json!({
+            "success": false,
+            "message": "Missing service_id or buyer_address"
+        }));
+    }
+    match node.submit_task_with_escrow(ServiceId(service_id.to_string()), task_payload, requirements, buyer_address.to_string()).await {
+        Ok(task_id) => Json(serde_json::json!({
+            "success": true,
+            "task_id": task_id.0
+        })),
+        Err(e) => Json(serde_json::json!({
+            "success": false,
+            "message": format!("Failed to submit task with escrow: {}", e)
+        })),
+    }
+}
+
+/// Handles POST /api/tasks/:task_id/complete (release escrow)
+pub async fn complete_task(State(state): State<ApiState>, axum::extract::Path(task_id): axum::extract::Path<String>, Json(payload): Json<serde_json::Value>) -> impl IntoResponse {
+    let node = &state.node;
+    // Lookup the task and escrow info (simplified)
+    let task = node.task_engine.completed_tasks.read().await.get(&TaskId(task_id.clone())).cloned();
+    if let Some(task) = task {
+        // Lookup provider address and amount (simplified: use service endpoint and price)
+        if let Ok(service) = node.get_service_details(&task.service_id.0).await {
+            let provider_address = service.endpoint;
+            let amount = service.price;
+            match node.release_escrow_to_provider(provider_address, amount).await {
+                Ok(txid) => Json(serde_json::json!({
+                    "success": true,
+                    "message": "Escrow released to provider",
+                    "txid": txid
+                })),
+                Err(e) => Json(serde_json::json!({
+                    "success": false,
+                    "message": format!("Failed to release escrow: {}", e)
+                })),
+            }
+        } else {
+            Json(serde_json::json!({
+                "success": false,
+                "message": "Service not found for task"
+            }))
+        }
+    } else {
+        Json(serde_json::json!({
+            "success": false,
+            "message": "Task not found or not completed"
+        }))
+    }
+}
 pub async fn get_wallet_info() -> impl IntoResponse { Json(serde_json::json!({"success": false, "message": "Not implemented yet"})) }
 pub async fn get_wallet_balances() -> impl IntoResponse { Json(serde_json::json!({"success": false, "message": "Not implemented yet"})) }
 pub async fn get_wallet_addresses() -> impl IntoResponse { Json(serde_json::json!({"success": false, "message": "Not implemented yet"})) }
@@ -483,4 +494,167 @@ pub async fn mark_message_read() -> impl IntoResponse { Json(serde_json::json!({
 pub async fn delete_message() -> impl IntoResponse { Json(serde_json::json!({"success": false, "message": "Not implemented yet"})) }
 pub async fn get_messaging_stats() -> impl IntoResponse { Json(serde_json::json!({"success": false, "message": "Not implemented yet"})) }
 pub async fn shutdown_node() -> impl IntoResponse { Json(serde_json::json!({"success": false, "message": "Not implemented yet"})) }
-pub async fn serve_index() -> impl IntoResponse { Json(serde_json::json!({"success": false, "message": "Not implemented yet"})) } 
+/// Handles GET / and /index.html
+pub async fn serve_index() -> Result<axum::response::Html<String>, axum::http::StatusCode> {
+    let html_content = include_str!("../../static/index.html");
+    Ok(axum::response::Html(html_content.to_string()))
+} 
+
+// --- DuxCoin Mining Handlers ---
+
+/// Handles POST /api/dux/mine/start
+pub async fn start_dux_mining() -> impl axum::response::IntoResponse {
+    match DUXCOIN_API.start_mining(2).await {
+        Ok(_) => axum::Json(serde_json::json!({
+            "success": true,
+            "message": "DuxCoin mining started with 2 threads"
+        })),
+        Err(e) => axum::Json(serde_json::json!({
+            "success": false,
+            "message": format!("Failed to start mining: {}", e)
+        })),
+    }
+}
+
+/// Handles POST /api/dux/mine/stop
+pub async fn stop_dux_mining() -> impl axum::response::IntoResponse {
+    match DUXCOIN_API.stop_mining().await {
+        Ok(_) => axum::Json(serde_json::json!({
+            "success": true,
+            "message": "DuxCoin mining stopped"
+        })),
+        Err(e) => axum::Json(serde_json::json!({
+            "success": false,
+            "message": format!("Failed to stop mining: {}", e)
+        })),
+    }
+}
+
+/// Handles GET /api/dux/mine/status
+pub async fn get_dux_mining_status() -> impl axum::response::IntoResponse {
+    match DUXCOIN_API.get_hash_rate().await {
+        Ok(hashrate) => axum::Json(serde_json::json!({
+            "success": true,
+            "hashrate": hashrate
+        })),
+        Err(e) => axum::Json(serde_json::json!({
+            "success": false,
+            "message": format!("Failed to get mining status: {}", e)
+        })),
+    }
+} 
+
+/// Handles GET /api/wallet/info
+pub async fn get_wallet_info(State(state): State<ApiState>) -> impl IntoResponse {
+    let node = &state.node;
+    let wallet = node.wallet.read().await;
+    let dux_address = wallet.get_address(&crate::wallet::Currency::DUX);
+    Json(serde_json::json!({
+        "success": true,
+        "address": dux_address
+    }))
+}
+
+/// Handles GET /api/wallet/balances
+pub async fn get_wallet_balances(State(state): State<ApiState>) -> impl IntoResponse {
+    let node = &state.node;
+    let wallet = node.wallet.read().await;
+    let dux_address = wallet.get_address(&crate::wallet::Currency::DUX);
+    match DUXCOIN_API.get_balance(&dux_address).await {
+        Ok(balance) => Json(serde_json::json!({
+            "success": true,
+            "balance": balance.total,
+            "confirmed": balance.confirmed,
+            "unconfirmed": balance.unconfirmed,
+            "address": dux_address
+        })),
+        Err(e) => Json(serde_json::json!({
+            "success": false,
+            "message": format!("Failed to get balance: {}", e)
+        })),
+    }
+}
+
+/// Handles GET /api/wallet/addresses
+pub async fn get_wallet_addresses(State(state): State<ApiState>) -> impl IntoResponse {
+    let node = &state.node;
+    let wallet = node.wallet.read().await;
+    let dux_address = wallet.get_address(&crate::wallet::Currency::DUX);
+    Json(serde_json::json!({
+        "success": true,
+        "addresses": [dux_address]
+    }))
+}
+
+/// Handles POST /api/wallet/send
+pub async fn send_funds(State(state): State<ApiState>, Json(payload): Json<serde_json::Value>) -> impl IntoResponse {
+    let node = &state.node;
+    let wallet = node.wallet.read().await;
+    let from_address = wallet.get_address(&crate::wallet::Currency::DUX);
+    let to_address = payload.get("to_address").and_then(|v| v.as_str()).unwrap_or("");
+    let amount = payload.get("amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
+    if to_address.is_empty() || amount <= 0.0 {
+        return Json(serde_json::json!({
+            "success": false,
+            "message": "Invalid to_address or amount"
+        }));
+    }
+    match DUXCOIN_API.send_dux(&from_address, to_address, amount).await {
+        Ok(txid) => Json(serde_json::json!({
+            "success": true,
+            "txid": txid
+        })),
+        Err(e) => Json(serde_json::json!({
+            "success": false,
+            "message": format!("Failed to send DuxCoin: {}", e)
+        })),
+    }
+}
+
+/// Handles POST /api/wallet/receive
+pub async fn receive_funds(State(state): State<ApiState>) -> impl IntoResponse {
+    let node = &state.node;
+    let wallet = node.wallet.read().await;
+    let dux_address = wallet.get_address(&crate::wallet::Currency::DUX);
+    Json(serde_json::json!({
+        "success": true,
+        "address": dux_address
+    }))
+}
+
+/// Handles GET /api/wallet/transactions
+pub async fn get_transaction_history(State(state): State<ApiState>) -> impl IntoResponse {
+    let node = &state.node;
+    let wallet = node.wallet.read().await;
+    let dux_address = wallet.get_address(&crate::wallet::Currency::DUX);
+    match DUXCOIN_API.get_transactions(&dux_address, 50).await {
+        Ok(txs) => Json(serde_json::json!({
+            "success": true,
+            "transactions": txs
+        })),
+        Err(e) => Json(serde_json::json!({
+            "success": false,
+            "message": format!("Failed to get transactions: {}", e)
+        })),
+    }
+}
+
+/// Handles GET /api/wallet/transaction/:id
+pub async fn get_transaction_by_id(State(state): State<ApiState>, axum::extract::Path(txid): axum::extract::Path<String>) -> impl IntoResponse {
+    let node = &state.node;
+    let wallet = node.wallet.read().await;
+    let dux_address = wallet.get_address(&crate::wallet::Currency::DUX);
+    match DUXCOIN_API.get_transactions(&dux_address, 100).await {
+        Ok(txs) => {
+            let tx = txs.into_iter().find(|t| t.txid == txid);
+            match tx {
+                Some(t) => Json(serde_json::json!({ "success": true, "transaction": t })),
+                None => Json(serde_json::json!({ "success": false, "message": "Transaction not found" })),
+            }
+        },
+        Err(e) => Json(serde_json::json!({
+            "success": false,
+            "message": format!("Failed to get transaction: {}", e)
+        })),
+    }
+} 

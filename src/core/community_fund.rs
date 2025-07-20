@@ -243,13 +243,13 @@ impl CommunityFundManager {
             
             // Convert to USD for total (simplified conversion)
             let usd_value = match currency {
-                Currency::BTC => fund.balance as f64 * 50000.0 / 10f64.powi(8), // $50k per BTC
-                Currency::ETH => fund.balance as f64 * 3000.0 / 10f64.powi(18), // $3k per ETH
-                Currency::USDC => fund.balance as f64 / 10f64.powi(6), // 1:1 USD
-                Currency::LTC => fund.balance as f64 * 100.0 / 10f64.powi(8), // $100 per LTC
-                Currency::XMR => fund.balance as f64 * 200.0 / 10f64.powi(12), // $200 per XMR
-                Currency::DOGE => fund.balance as f64 * 0.1 / 10f64.powi(8), // $0.1 per DOGE
-                Currency::DUX => fund.balance as f64 * 0.05 / 10f64.powi(8), // $0.05 per DUX
+                &Currency::BTC => fund.balance as f64 * 50000.0 / 10f64.powi(8), // $50k per BTC
+                &Currency::ETH => fund.balance as f64 * 3000.0 / 10f64.powi(18), // $3k per ETH
+                &Currency::USDC => fund.balance as f64 / 10f64.powi(6), // 1:1 USD
+                &Currency::LTC => fund.balance as f64 * 100.0 / 10f64.powi(8), // $100 per LTC
+                &Currency::XMR => fund.balance as f64 * 200.0 / 10f64.powi(12), // $200 per XMR
+                &Currency::DOGE => fund.balance as f64 * 0.1 / 10f64.powi(8), // $0.1 per DOGE
+                &Currency::DUX => fund.balance as f64 * 0.05 / 10f64.powi(8), // $0.05 per DUX
             };
             
             total_balance_usd += usd_value;

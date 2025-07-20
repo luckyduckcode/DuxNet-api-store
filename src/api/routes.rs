@@ -31,8 +31,6 @@ use tower_http::services::ServeDir;
 use crate::api::handlers::*;
 use crate::api::state::ApiState;
 use axum::http::Method;
-use axum::middleware;
-use crate::api::handlers::auth_middleware;
 
 pub fn create_router(state: ApiState) -> Router {
     let cors = CorsLayer::new()
@@ -139,7 +137,6 @@ pub fn create_router(state: ApiState) -> Router {
         .route("/", get(serve_index))
         .route("/index.html", get(serve_index))
         .nest_service("/static", ServeDir::new("static"))
-        .layer(middleware::from_fn_with_state(state.clone(), auth_middleware))
         .layer(cors)
         .with_state(state)
 } 

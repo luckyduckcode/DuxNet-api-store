@@ -1,849 +1,401 @@
-// DuxNet Frontend JavaScript
-const API_BASE = 'http://localhost:8081/api';
+// DuxNet API Store Frontend
+// This script provides the GUI interface for the DuxNet API Store
 
-// Initialize the application
-document.addEventListener('DOMContentLoaded', function() {
-    loadNodeStatus();
-    refreshStats();
-    refreshBalances();
-    loadWalletAddresses();
-    
-    // Auto-refresh stats every 30 seconds
-    setInterval(refreshStats, 30000);
-    
-    // Auto-refresh balances every 60 seconds
-    setInterval(refreshBalances, 60000);
-});
-
-// Load node status
-async function loadNodeStatus() {
-    try {
-        const response = await fetch(`${API_BASE}/status`);
-        const status = await response.json();
-        
-        document.getElementById('nodeDid').textContent = status.did;
-        document.getElementById('nodeReputation').textContent = status.reputation_score.toFixed(2);
-        document.getElementById('peerCount').textContent = status.peers_count;
-        
-    } catch (error) {
-        console.error('Failed to load node status:', error);
-        showNotification('Failed to load node status', 'error');
+class DuxNetAPIStore {
+    constructor() {
+        this.baseUrl = 'http://localhost:8081';
+        this.apiKey = 'demo-api-key-123';
+        this.init();
     }
-}
 
-// Register a new service
-async function registerService() {
-    const name = document.getElementById('serviceName').value;
-    const description = document.getElementById('serviceDescription').value;
-    const price = parseFloat(document.getElementById('servicePrice').value);
-    const currency = document.getElementById('serviceCurrency').value;
-    
-    if (!name || !description || !price) {
-        showNotification('Please fill in all fields', 'error');
-        return;
+    async init() {
+        await this.updateStatus();
+        await this.loadServiceCategories();
+        await this.loadServices();
+        this.setupEventListeners();
+        this.startStatusUpdates();
     }
-    
-    try {
-        const response = await fetch(`${API_BASE}/services/register`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                name,
-                description,
-                price,
-                currency
-            })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showNotification(`Service registered successfully! ID: ${result.service_id}`, 'success');
+
+    async updateStatus() {
+        try {
+            const response = await fetch(`${this.baseUrl}/api/status`);
+            const status = await response.json();
             
-            // Clear form
-            document.getElementById('serviceName').value = '';
-            document.getElementById('serviceDescription').value = '';
-            document.getElementById('servicePrice').value = '';
-            document.getElementById('serviceCurrency').value = 'USDC';
-        } else {
-            showNotification(result.message, 'error');
-        }
-        
-    } catch (error) {
-        console.error('Failed to register service:', error);
-        showNotification('Failed to register service', 'error');
-    }
-}
-
-// Search for services
-async function searchServices() {
-    const query = document.getElementById('searchQuery').value;
-    
-    if (!query) {
-        showNotification('Please enter a search query', 'error');
-        return;
-    }
-    
-    try {
-        const response = await fetch(`${API_BASE}/services/search`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                query
-            })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            displaySearchResults(result.services);
-            showNotification(`Found ${result.services.length} services`, 'success');
-        } else {
-            showNotification(result.message, 'error');
-        }
-        
-    } catch (error) {
-        console.error('Failed to search services:', error);
-        showNotification('Failed to search services', 'error');
-    }
-}
-
-// Display search results
-function displaySearchResults(services) {
-    const container = document.getElementById('searchResults');
-    
-    if (services.length === 0) {
-        container.innerHTML = '<div class="result-item"><p>No services found</p></div>';
-        return;
-    }
-    
-    container.innerHTML = services.map(service => `
-        <div class="result-item">
-            <h4>${service.name}</h4>
-            <p><strong>ID:</strong> ${service.id}</p>
-            <p><strong>Description:</strong> ${service.description}</p>
-            <p><strong>Price:</strong> ${service.price} ${service.currency || 'DOGE'}</p>
-            <p><strong>Provider:</strong> ${service.provider_did}</p>
-            <p><strong>Reputation:</strong> ${service.reputation_score.toFixed(2)}</p>
-        </div>
-    `).join('');
-}
-
-// Submit a task
-async function submitTask() {
-    const serviceId = document.getElementById('taskService').value;
-    const payload = document.getElementById('taskPayload').value;
-    const cpuCores = parseInt(document.getElementById('taskCpu').value);
-    const memoryMb = parseInt(document.getElementById('taskMemory').value);
-    const timeoutSeconds = parseInt(document.getElementById('taskTimeout').value);
-    
-    if (!serviceId || !payload) {
-        showNotification('Please fill in service ID and payload', 'error');
-        return;
-    }
-    
-    try {
-        const response = await fetch(`${API_BASE}/tasks/submit`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                service_id: serviceId,
-                payload,
-                cpu_cores: cpuCores,
-                memory_mb: memoryMb,
-                timeout_seconds: timeoutSeconds
-            })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showNotification(`Task submitted successfully! ID: ${result.task_id}`, 'success');
+            document.getElementById('nodeId').textContent = status.node_id.substring(0, 8) + '...';
+            document.getElementById('did').textContent = status.did.substring(0, 20) + '...';
+            document.getElementById('servicesCount').textContent = status.services_count;
+            document.getElementById('reputationScore').textContent = status.reputation_score.toFixed(2);
             
-            // Clear form
-            document.getElementById('taskService').value = '';
-            document.getElementById('taskPayload').value = '';
-            document.getElementById('taskCpu').value = '1';
-            document.getElementById('taskMemory').value = '512';
-            document.getElementById('taskTimeout').value = '60';
-        } else {
-            showNotification(result.message, 'error');
+            const statusIndicator = document.querySelector('.status-indicator');
+            statusIndicator.style.background = status.is_online ? '#00ff00' : '#ff0000';
+        } catch (error) {
+            console.error('Failed to update status:', error);
         }
-        
-    } catch (error) {
-        console.error('Failed to submit task:', error);
-        showNotification('Failed to submit task', 'error');
     }
-}
 
-// Create an escrow
-async function createEscrow() {
-    const serviceId = document.getElementById('escrowService').value;
-    const sellerDid = document.getElementById('escrowSeller').value;
-    const amount = parseFloat(document.getElementById('escrowAmount').value);
-    const currency = document.getElementById('escrowCurrency').value;
-    
-    if (!serviceId || !sellerDid || !amount) {
-        showNotification('Please fill in all fields', 'error');
-        return;
-    }
-    
-    try {
-        const response = await fetch(`${API_BASE}/escrow/create`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                service_id: serviceId,
-                seller_did: sellerDid,
-                amount,
-                currency
-            })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showNotification(`Escrow created successfully! ID: ${result.escrow_id}`, 'success');
+    async loadServiceCategories() {
+        try {
+            const response = await fetch(`${this.baseUrl}/api/services/categories`);
+            const data = await response.json();
             
-            // Clear form
-            document.getElementById('escrowService').value = '';
-            document.getElementById('escrowSeller').value = '';
-            document.getElementById('escrowAmount').value = '';
-        } else {
-            showNotification(result.message, 'error');
-        }
-        
-    } catch (error) {
-        console.error('Failed to create escrow:', error);
-        showNotification('Failed to create escrow', 'error');
-    }
-}
-
-// Refresh network statistics
-async function refreshStats() {
-    try {
-        const response = await fetch(`${API_BASE}/stats`);
-        const stats = await response.json();
-        
-        // Update DHT stats
-        document.getElementById('dhtEntries').textContent = stats.dht.total_entries;
-        document.getElementById('dhtPeers').textContent = stats.dht.total_peers;
-        
-        // Update reputation stats
-        document.getElementById('repNodes').textContent = stats.reputation.total_nodes;
-        document.getElementById('repAttestations').textContent = stats.reputation.total_attestations;
-        
-        // Update escrow stats
-        document.getElementById('escrowContracts').textContent = stats.escrow.total_contracts;
-        document.getElementById('escrowAmount').textContent = stats.escrow.total_amount;
-        
-        // Update task stats
-        document.getElementById('taskPending').textContent = stats.tasks.pending_count;
-        document.getElementById('taskCompleted').textContent = stats.tasks.completed_count;
-        
-    } catch (error) {
-        console.error('Failed to refresh stats:', error);
-    }
-}
-
-// Show notification
-function showNotification(message, type) {
-    const notification = document.getElementById('notification');
-    notification.textContent = message;
-    notification.className = `notification ${type}`;
-    notification.classList.add('show');
-    
-    setTimeout(() => {
-        notification.classList.remove('show');
-    }, 3000);
-}
-
-// Utility function to simulate API call delay
-async function simulateApiCall() {
-    return new Promise(resolve => {
-        setTimeout(resolve, 500 + Math.random() * 1000);
-    });
-}
-
-// Refresh wallet balances
-async function refreshBalances() {
-    try {
-        const response = await fetch(`${API_BASE}/wallet/balances`);
-        const balances = await response.json();
-        
-        if (balances.success) {
-            document.getElementById('btcBalance').textContent = formatCurrencyAmount(balances.balances.BTC || 0, 'BTC');
-            document.getElementById('ethBalance').textContent = formatCurrencyAmount(balances.balances.ETH || 0, 'ETH');
-            document.getElementById('usdcBalance').textContent = formatCurrencyAmount(balances.balances.USDC || 0, 'USDC');
-            document.getElementById('ltcBalance').textContent = formatCurrencyAmount(balances.balances.LTC || 0, 'LTC');
-            document.getElementById('xmrBalance').textContent = formatCurrencyAmount(balances.balances.XMR || 0, 'XMR');
-            document.getElementById('dogeBalance').textContent = formatCurrencyAmount(balances.balances.DOGE || 0, 'DOGE');
-        }
-    } catch (error) {
-        console.error('Failed to refresh balances:', error);
-        // Don't show error notification for balance refresh to avoid spam
-    }
-}
-
-// Change preferred currency
-async function changePreferredCurrency() {
-    const currency = document.getElementById('preferredCurrency').value;
-    
-    try {
-        const response = await fetch(`${API_BASE}/wallet/preferred-currency`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                currency
-            })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showNotification(`Preferred currency changed to ${currency}`, 'success');
-        } else {
-            showNotification(result.message, 'error');
-        }
-    } catch (error) {
-        console.error('Failed to change preferred currency:', error);
-        showNotification('Failed to change preferred currency', 'error');
-    }
-}
-
-// Format currency amount with proper decimals
-function formatCurrencyAmount(amount, currency) {
-    const decimals = {
-        'BTC': 8,
-        'ETH': 18,
-        'USDC': 6,
-        'LTC': 8,
-        'XMR': 12,
-        'DOGE': 8
-    };
-    
-    const decimalPlaces = decimals[currency] || 8;
-    const whole = Math.floor(amount / Math.pow(10, decimalPlaces));
-    const fraction = amount % Math.pow(10, decimalPlaces);
-    
-    if (fraction === 0) {
-        return `${whole} ${currency}`;
-    } else {
-        const fractionStr = fraction.toString().padStart(decimalPlaces, '0');
-        return `${whole}.${fractionStr} ${currency}`;
-    }
-}
-
-// Wallet Tab Management
-function showWalletTab(tabName) {
-    // Hide all tab contents
-    const tabContents = document.querySelectorAll('.tab-content');
-    tabContents.forEach(content => content.classList.remove('active'));
-    
-    // Remove active class from all tab buttons
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    tabButtons.forEach(btn => btn.classList.remove('active'));
-    
-    // Show selected tab content
-    document.getElementById(`${tabName}-tab`).classList.add('active');
-    
-    // Add active class to clicked button
-    event.target.classList.add('active');
-    
-    // Load tab-specific data
-    switch(tabName) {
-        case 'balances':
-            refreshBalances();
-            break;
-        case 'receive':
-            loadWalletAddresses();
-            break;
-        case 'history':
-            refreshTransactionHistory();
-            break;
-        case 'keys':
-            refreshKeys();
-            break;
-    }
-}
-
-// Enhanced Balance Refresh
-async function refreshBalances() {
-    try {
-        const response = await fetch(`${API_BASE}/wallet/balances`);
-        const result = await response.json();
-        
-        if (result.success) {
-            // Update individual balances
-            document.getElementById('btcBalance').textContent = result.balances.BTC || '0.00000000 BTC';
-            document.getElementById('ethBalance').textContent = result.balances.ETH || '0.000000000000000000 ETH';
-            document.getElementById('usdcBalance').textContent = result.balances.USDC || '0.000000 USDC';
-            document.getElementById('ltcBalance').textContent = result.balances.LTC || '0.00000000 LTC';
-            document.getElementById('xmrBalance').textContent = result.balances.XMR || '0.000000000000 XMR';
-            document.getElementById('dogeBalance').textContent = result.balances.DOGE || '0.00000000 DOGE';
+            const categorySelect = document.getElementById('serviceCategory');
+            categorySelect.innerHTML = '<option value="">Select Category</option>';
             
-            // Update total USD value
-            document.getElementById('totalUsdValue').textContent = `$${result.total_usd.toFixed(2)} USD`;
-            
-            showNotification('Balances refreshed successfully', 'success');
-        } else {
-            showNotification(result.message, 'error');
-        }
-    } catch (error) {
-        console.error('Failed to refresh balances:', error);
-        showNotification('Failed to refresh balances', 'error');
-    }
-}
-
-// Load Wallet Addresses
-async function loadWalletAddresses() {
-    try {
-        const response = await fetch(`${API_BASE}/wallet/addresses`);
-        const result = await response.json();
-        
-        if (result.success) {
-            document.getElementById('btcAddress').textContent = result.addresses.BTC || 'Address not available';
-            document.getElementById('ethAddress').textContent = result.addresses.ETH || 'Address not available';
-            document.getElementById('usdcAddress').textContent = result.addresses.USDC || 'Address not available';
-            document.getElementById('ltcAddress').textContent = result.addresses.LTC || 'Address not available';
-            document.getElementById('xmrAddress').textContent = result.addresses.XMR || 'Address not available';
-            document.getElementById('dogeAddress').textContent = result.addresses.DOGE || 'Address not available';
-        } else {
-            showNotification(result.message, 'error');
-        }
-    } catch (error) {
-        console.error('Failed to load addresses:', error);
-        showNotification('Failed to load addresses', 'error');
-    }
-}
-
-// Copy Address to Clipboard
-async function copyAddress(elementId) {
-    const address = document.getElementById(elementId).textContent;
-    try {
-        await navigator.clipboard.writeText(address);
-        showNotification('Address copied to clipboard!', 'success');
-    } catch (error) {
-        console.error('Failed to copy address:', error);
-        showNotification('Failed to copy address', 'error');
-    }
-}
-
-// Send Funds
-async function sendFunds() {
-    const toAddress = document.getElementById('sendToAddress').value;
-    const amount = parseFloat(document.getElementById('sendAmount').value);
-    const currency = document.getElementById('sendCurrency').value;
-    const memo = document.getElementById('sendMemo').value;
-    
-    if (!toAddress || !amount || amount <= 0) {
-        showNotification('Please enter a valid address and amount', 'error');
-        return;
-    }
-    
-    try {
-        const response = await fetch(`${API_BASE}/wallet/send`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                to_address: toAddress,
-                amount: Math.floor(amount * Math.pow(10, getCurrencyDecimals(currency))),
-                currency: currency,
-                memo: memo || null
-            })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showNotification(`Transaction sent! ID: ${result.transaction_id}`, 'success');
-            
-            // Clear form
-            document.getElementById('sendToAddress').value = '';
-            document.getElementById('sendAmount').value = '';
-            document.getElementById('sendMemo').value = '';
-            
-            // Refresh balances
-            refreshBalances();
-            refreshTransactionHistory();
-        } else {
-            showNotification(result.message, 'error');
-        }
-    } catch (error) {
-        console.error('Failed to send funds:', error);
-        showNotification('Failed to send funds', 'error');
-    }
-}
-
-// Get currency decimals
-function getCurrencyDecimals(currency) {
-    const decimals = {
-        'BTC': 8,
-        'ETH': 18,
-        'USDC': 6,
-        'LTC': 8,
-        'XMR': 12,
-        'DOGE': 8
-    };
-    return decimals[currency] || 8;
-}
-
-// Refresh Transaction History
-async function refreshTransactionHistory() {
-    try {
-        const response = await fetch(`${API_BASE}/wallet/transactions`);
-        const result = await response.json();
-        
-        if (result.success) {
-            displayTransactionHistory(result.transactions);
-        } else {
-            showNotification(result.message, 'error');
-        }
-    } catch (error) {
-        console.error('Failed to load transaction history:', error);
-        showNotification('Failed to load transaction history', 'error');
-    }
-}
-
-// Display Transaction History
-function displayTransactionHistory(transactions) {
-    const container = document.getElementById('transactionHistory');
-    
-    if (transactions.length === 0) {
-        container.innerHTML = '<p>No transactions yet</p>';
-        return;
-    }
-    
-    container.innerHTML = transactions.map(tx => `
-        <div class="transaction-item">
-            <h4>Transaction ${tx.id.substring(0, 8)}...</h4>
-            <div class="transaction-details">
-                <div>
-                    <p><strong>From:</strong> ${tx.from.substring(0, 20)}...</p>
-                    <p><strong>To:</strong> ${tx.to.substring(0, 20)}...</p>
-                    <p><strong>Amount:</strong> ${formatCurrencyAmount(tx.amount, tx.currency)}</p>
-                </div>
-                <div>
-                    <p><strong>Date:</strong> ${new Date(tx.timestamp * 1000).toLocaleString()}</p>
-                    <p><strong>Fee:</strong> ${formatCurrencyAmount(tx.fee, tx.currency)}</p>
-                    <span class="transaction-status status-${tx.status.toLowerCase()}">${tx.status}</span>
-                </div>
-            </div>
-            ${tx.memo ? `<p><strong>Memo:</strong> ${tx.memo}</p>` : ''}
-        </div>
-    `).join('');
-}
-
-// Filter Transactions
-function filterTransactions() {
-    const currency = document.getElementById('historyCurrency').value;
-    // In a real implementation, you'd filter the transactions here
-    // For now, just refresh the history
-    refreshTransactionHistory();
-}
-
-// Refresh Keys
-async function refreshKeys() {
-    try {
-        const response = await fetch(`${API_BASE}/wallet/keys`);
-        const result = await response.json();
-        
-        if (result.success) {
-            document.getElementById('publicKey').textContent = result.public_key;
-            document.getElementById('privateKey').textContent = result.private_key;
-        } else {
-            showNotification(result.message, 'error');
-        }
-    } catch (error) {
-        console.error('Failed to load keys:', error);
-        showNotification('Failed to load keys', 'error');
-    }
-}
-
-// Copy Key to Clipboard
-async function copyKey(elementId) {
-    const key = document.getElementById(elementId).textContent;
-    try {
-        await navigator.clipboard.writeText(key);
-        showNotification('Key copied to clipboard!', 'success');
-    } catch (error) {
-        console.error('Failed to copy key:', error);
-        showNotification('Failed to copy key', 'error');
-    }
-}
-
-// Backup Wallet
-async function backupWallet() {
-    try {
-        const response = await fetch(`${API_BASE}/wallet/backup`);
-        const result = await response.json();
-        
-        if (result.success) {
-            document.getElementById('backupText').value = result.backup_data;
-            document.getElementById('backupData').style.display = 'block';
-            showNotification('Wallet backup created successfully', 'success');
-        } else {
-            showNotification(result.message, 'error');
-        }
-    } catch (error) {
-        console.error('Failed to backup wallet:', error);
-        showNotification('Failed to backup wallet', 'error');
-    }
-}
-
-// Copy Backup to Clipboard
-async function copyBackup() {
-    const backupText = document.getElementById('backupText').value;
-    try {
-        await navigator.clipboard.writeText(backupText);
-        showNotification('Backup copied to clipboard!', 'success');
-    } catch (error) {
-        console.error('Failed to copy backup:', error);
-        showNotification('Failed to copy backup', 'error');
-    }
-}
-
-// Restore Wallet
-async function restoreWallet() {
-    const backupData = document.getElementById('restoreData').value;
-    
-    if (!backupData) {
-        showNotification('Please paste backup data', 'error');
-        return;
-    }
-    
-    try {
-        const response = await fetch(`${API_BASE}/wallet/restore`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                backup_data: backupData
-            })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showNotification('Wallet restored successfully', 'success');
-            document.getElementById('restoreData').value = '';
-            
-            // Refresh all wallet data
-            refreshBalances();
-            loadWalletAddresses();
-            refreshTransactionHistory();
-            refreshKeys();
-        } else {
-            showNotification(result.message, 'error');
-        }
-    } catch (error) {
-        console.error('Failed to restore wallet:', error);
-        showNotification('Failed to restore wallet', 'error');
-    }
-} 
-
-async function registerAOIKey() {
-    const serviceId = document.getElementById('aoiServiceId').value;
-    const keyData = document.getElementById('aoiKeyData').value;
-    if (!serviceId || !keyData) {
-        showNotification('Please enter both Service ID and AOI Key Data', 'error');
-        return;
-    }
-    try {
-        const response = await fetch(`${API_BASE}/services/aoi/register`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ service_id: serviceId, key_data: keyData })
-        });
-        const result = await response.json();
-        if (result.success) {
-            showNotification('AOI key registered successfully!', 'success');
-            document.getElementById('aoiKeyResult').innerHTML = '<p>AOI key registered for service.</p>';
-        } else {
-            showNotification(result.message, 'error');
-            document.getElementById('aoiKeyResult').innerHTML = `<p style='color:red;'>${result.message}</p>`;
-        }
-    } catch (error) {
-        showNotification('Failed to register AOI key', 'error');
-        document.getElementById('aoiKeyResult').innerHTML = `<p style='color:red;'>Failed to register AOI key</p>`;
-    }
-}
-
-async function getAOIKey() {
-    const serviceId = document.getElementById('aoiServiceId').value;
-    if (!serviceId) {
-        showNotification('Please enter Service ID', 'error');
-        return;
-    }
-    try {
-        const response = await fetch(`${API_BASE}/services/aoi/get`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ service_id: serviceId })
-        });
-        const result = await response.json();
-        if (result.success && result.key_data) {
-            showNotification('AOI key retrieved successfully!', 'success');
-            document.getElementById('aoiKeyResult').innerHTML = `<p><strong>AOI Key:</strong> ${result.key_data}</p>`;
-        } else {
-            showNotification(result.message, 'error');
-            document.getElementById('aoiKeyResult').innerHTML = `<p style='color:red;'>${result.message}</p>`;
-        }
-    } catch (error) {
-        showNotification('Failed to retrieve AOI key', 'error');
-        document.getElementById('aoiKeyResult').innerHTML = `<p style='color:red;'>Failed to retrieve AOI key</p>`;
-    }
-} 
-
-// Messaging functionality
-async function sendMessage() {
-    const messageInput = document.getElementById('messageInput');
-    const messageType = document.getElementById('messageType');
-    const content = messageInput.value.trim();
-    
-    if (!content) {
-        showNotification('Please enter a message', 'error');
-        return;
-    }
-    
-    // For demo purposes, send to a test peer
-    const toDid = 'did:duxnet:test-peer-123';
-    
-    try {
-        // Check if we're in Tauri app
-        if (window.__TAURI__) {
-            const result = await window.__TAURI__.invoke('send_message', {
-                toDid: toDid,
-                content: content,
-                messageType: messageType.value
+            data.categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                categorySelect.appendChild(option);
             });
-            
-            if (result.success) {
-                showNotification('Message sent successfully!', 'success');
-                messageInput.value = '';
-                loadConversations();
-            } else {
-                showNotification('Failed to send message: ' + result.error, 'error');
-            }
-        } else {
-            // Fallback to API call
-            const response = await fetch('/api/messaging/send', {
+        } catch (error) {
+            console.error('Failed to load categories:', error);
+        }
+    }
+
+    async loadServices() {
+        try {
+            const response = await fetch(`${this.baseUrl}/api/services/search`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.apiKey}`
                 },
                 body: JSON.stringify({
-                    to_did: toDid,
-                    content: content,
-                    message_type: messageType.value,
-                    reply_to: null
+                    query: '',
+                    limit: 10,
+                    offset: 0,
+                    sort_by: 'Name',
+                    sort_order: 'asc'
                 })
             });
             
-            const result = await response.json();
-            if (result.success) {
-                showNotification('Message sent successfully!', 'success');
-                messageInput.value = '';
-                loadConversations();
-            } else {
-                showNotification('Failed to send message: ' + result.message, 'error');
-            }
+            const data = await response.json();
+            this.displayServices(data.services);
+        } catch (error) {
+            console.error('Failed to load services:', error);
         }
-    } catch (error) {
-        showNotification('Error sending message: ' + error.message, 'error');
     }
-}
 
-async function loadConversations() {
-    try {
-        let conversations = [];
+    displayServices(services) {
+        const servicesContainer = document.getElementById('servicesList');
+        servicesContainer.innerHTML = '';
         
-        if (window.__TAURI__) {
-            const result = await window.__TAURI__.invoke('get_conversations');
-            if (result.success) {
-                conversations = result.data;
-            }
-        } else {
-            const response = await fetch('/api/messaging/conversations');
-            const result = await response.json();
-            if (result.success) {
-                conversations = result.conversations;
-            }
+        if (services.length === 0) {
+            servicesContainer.innerHTML = '<p class="no-services">No services found. Register your first service!</p>';
+            return;
         }
         
-        displayConversations(conversations);
-    } catch (error) {
-        console.error('Error loading conversations:', error);
-    }
-}
-
-function displayConversations(conversations) {
-    const conversationsList = document.getElementById('conversationsList');
-    
-    if (conversations.length === 0) {
-        conversationsList.innerHTML = '<div class="conversation-item"><small>No conversations yet</small></div>';
-        return;
-    }
-    
-    conversationsList.innerHTML = conversations.map(conv => `
-        <div class="conversation-item" onclick="loadMessages('${conv.peer_did}')">
-            <div class="conversation-header">
-                <strong>${conv.peer_did}</strong>
-                ${conv.unread_count > 0 ? `<span class="unread-badge">${conv.unread_count}</span>` : ''}
-            </div>
-            <small>${conv.last_message ? conv.last_message.content.substring(0, 50) + '...' : 'No messages yet'}</small>
-        </div>
-    `).join('');
-}
-
-async function loadMessages(peerDid) {
-    try {
-        let messages = [];
-        
-        if (window.__TAURI__) {
-            const result = await window.__TAURI__.invoke('get_messages', { peerDid: peerDid });
-            if (result.success) {
-                messages = result.data;
-            }
-        } else {
-            const response = await fetch(`/api/messaging/messages/${encodeURIComponent(peerDid)}`);
-            const result = await response.json();
-            if (result.success) {
-                messages = result.messages;
-            }
-        }
-        
-        // For now, just show a notification with message count
-        showNotification(`Loaded ${messages.length} messages from ${peerDid}`, 'info');
-    } catch (error) {
-        console.error('Error loading messages:', error);
-    }
-}
-
-// Load conversations on page load
-document.addEventListener('DOMContentLoaded', function() {
-    loadConversations();
-    
-    // Add enter key support for message input
-    const messageInput = document.getElementById('messageInput');
-    if (messageInput) {
-        messageInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
+        services.forEach(service => {
+            const serviceCard = document.createElement('div');
+            serviceCard.className = 'service-card';
+            serviceCard.innerHTML = `
+                <h3>${service.name}</h3>
+                <p class="service-description">${service.description}</p>
+                <div class="service-meta">
+                    <span class="service-price">${this.formatPrice(service.price)}</span>
+                    <span class="service-category">${service.categories.join(', ')}</span>
+                </div>
+                <div class="service-stats">
+                    <span class="service-uptime">Uptime: ${service.uptime_percentage}%</span>
+                    <span class="service-response">Response: ${service.response_time_ms}ms</span>
+                </div>
+            `;
+            servicesContainer.appendChild(serviceCard);
         });
     }
-}); 
+
+    async registerService() {
+        const formData = {
+            name: document.getElementById('serviceName').value,
+            description: document.getElementById('serviceDescription').value,
+            price: parseInt(document.getElementById('servicePrice').value) || 0,
+            categories: [document.getElementById('serviceCategory').value].filter(Boolean),
+            tags: document.getElementById('serviceTags').value.split(',').map(tag => tag.trim()).filter(Boolean),
+            sla: {
+                uptime_guarantee: parseFloat(document.getElementById('uptimeGuarantee').value) || 99.0,
+                max_response_time_ms: parseInt(document.getElementById('maxResponseTime').value) || 5000,
+                support_response_hours: parseInt(document.getElementById('supportHours').value) || 24,
+                refund_policy: { "PartialRefund": { "percentage": 50.0 } },
+                availability_zones: ["global"]
+            },
+            version: document.getElementById('serviceVersion').value || "1.0.0",
+            rate_limit_per_minute: parseInt(document.getElementById('rateLimit').value) || 1000,
+            supported_formats: ["JSON"],
+            examples: []
+        };
+
+        try {
+            const response = await fetch(`${this.baseUrl}/api/services/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.apiKey}`
+                },
+                body: JSON.stringify(formData)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                this.showNotification('Service registered successfully!', 'success');
+                this.clearForm();
+                await this.loadServices();
+                await this.updateStatus();
+            } else {
+                this.showNotification('Failed to register service: ' + result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Registration error:', error);
+            this.showNotification('Failed to register service', 'error');
+        }
+    }
+
+    async searchServices() {
+        const query = document.getElementById('searchQuery').value;
+        const category = document.getElementById('searchCategory').value;
+        
+        try {
+            const response = await fetch(`${this.baseUrl}/api/services/search`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.apiKey}`
+                },
+                body: JSON.stringify({
+                    query: query,
+                    categories: category ? [category] : [],
+                    limit: 20,
+                    offset: 0,
+                    sort_by: 'Name',
+                    sort_order: 'asc'
+                })
+            });
+            
+            const data = await response.json();
+            this.displayServices(data.services);
+            
+            const resultsCount = document.getElementById('searchResults');
+            resultsCount.textContent = `Found ${data.total_count} services`;
+        } catch (error) {
+            console.error('Search error:', error);
+            this.showNotification('Failed to search services', 'error');
+        }
+    }
+
+    async loadAnalytics() {
+        try {
+            const response = await fetch(`${this.baseUrl}/api/analytics/usage`, {
+                headers: {
+                    'Authorization': `Bearer ${this.apiKey}`
+                }
+            });
+            
+            const data = await response.json();
+            
+            document.getElementById('totalRequests').textContent = data.total_requests;
+            document.getElementById('periodHours').textContent = data.period_hours;
+            
+            // Update analytics chart or display
+            this.updateAnalyticsDisplay(data);
+        } catch (error) {
+            console.error('Failed to load analytics:', error);
+        }
+    }
+
+    updateAnalyticsDisplay(data) {
+        // Simple analytics display - can be enhanced with charts
+        const analyticsContainer = document.getElementById('analyticsDisplay');
+        if (analyticsContainer) {
+            analyticsContainer.innerHTML = `
+                <div class="analytics-item">
+                    <h4>Total Requests</h4>
+                    <p>${data.total_requests}</p>
+                </div>
+                <div class="analytics-item">
+                    <h4>Period</h4>
+                    <p>${data.period_hours} hours</p>
+                </div>
+            `;
+        }
+    }
+
+    formatPrice(price) {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 0
+        }).format(price / 1000000); // Assuming price is in micro-units
+    }
+
+    clearForm() {
+        document.getElementById('serviceName').value = '';
+        document.getElementById('serviceDescription').value = '';
+        document.getElementById('servicePrice').value = '';
+        document.getElementById('serviceCategory').value = '';
+        document.getElementById('serviceTags').value = '';
+        document.getElementById('uptimeGuarantee').value = '';
+        document.getElementById('maxResponseTime').value = '';
+        document.getElementById('supportHours').value = '';
+        document.getElementById('serviceVersion').value = '';
+        document.getElementById('rateLimit').value = '';
+    }
+
+    showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+
+    setupEventListeners() {
+        // Service registration
+        const registerBtn = document.getElementById('registerService');
+        if (registerBtn) {
+            registerBtn.addEventListener('click', () => this.registerService());
+        }
+
+        // Service search
+        const searchBtn = document.getElementById('searchServices');
+        if (searchBtn) {
+            searchBtn.addEventListener('click', () => this.searchServices());
+        }
+
+        // Analytics
+        const analyticsBtn = document.getElementById('loadAnalytics');
+        if (analyticsBtn) {
+            analyticsBtn.addEventListener('click', () => this.loadAnalytics());
+        }
+
+        // Search input
+        const searchInput = document.getElementById('searchQuery');
+        if (searchInput) {
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.searchServices();
+                }
+            });
+        }
+    }
+
+    startStatusUpdates() {
+        setInterval(() => {
+            this.updateStatus();
+        }, 30000); // Update every 30 seconds
+    }
+}
+
+// Initialize the application when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    window.duxNetStore = new DuxNetAPIStore();
+});
+
+// Add CSS for notifications
+const style = document.createElement('style');
+style.textContent = `
+    .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        border-radius: 10px;
+        color: white;
+        font-weight: 600;
+        z-index: 1000;
+        animation: slideIn 0.3s ease;
+    }
+    
+    .notification.success {
+        background: linear-gradient(45deg, #00ff00, #00cc00);
+    }
+    
+    .notification.error {
+        background: linear-gradient(45deg, #ff0000, #cc0000);
+    }
+    
+    .notification.info {
+        background: linear-gradient(45deg, #00ffff, #00cccc);
+    }
+    
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    
+    .service-card {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+    }
+    
+    .service-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 255, 255, 0.2);
+    }
+    
+    .service-card h3 {
+        color: #00ffff;
+        margin-bottom: 10px;
+    }
+    
+    .service-description {
+        color: #cccccc;
+        margin-bottom: 15px;
+    }
+    
+    .service-meta {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+    
+    .service-price {
+        color: #ffff00;
+        font-weight: 600;
+    }
+    
+    .service-category {
+        color: #ff00ff;
+        font-size: 0.9rem;
+    }
+    
+    .service-stats {
+        display: flex;
+        gap: 15px;
+        font-size: 0.8rem;
+        color: #888888;
+    }
+    
+    .no-services {
+        text-align: center;
+        color: #888888;
+        font-style: italic;
+    }
+    
+    .analytics-item {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 10px;
+        text-align: center;
+    }
+    
+    .analytics-item h4 {
+        color: #00ffff;
+        margin-bottom: 5px;
+    }
+    
+    .analytics-item p {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #ffffff;
+    }
+`;
+document.head.appendChild(style); 

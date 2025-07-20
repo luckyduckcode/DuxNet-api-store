@@ -24,6 +24,8 @@
 //! - Expand network metrics and monitoring features.
 //!
 //! This structure ensures the networking layer is robust, scalable, and easy to extend as the platform evolves.
+pub mod p2p;
+
 use crate::core::data_structures::*;
 use anyhow::Result;
 use std::collections::HashMap;

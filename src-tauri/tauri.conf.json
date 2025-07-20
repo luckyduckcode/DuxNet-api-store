@@ -1,9 +1,9 @@
 {
-  "identifier": "com.duxnet.wallet",
+  "identifier": "com.duxnet.apistore",
   "build": {
     "beforeDevCommand": "",
     "beforeBuildCommand": "",
-    "frontendDist": "../frontend"
+    "frontendDist": "../static"
   },
   "app": {
     "security": {
@@ -13,9 +13,15 @@
       {
         "fullscreen": false,
         "resizable": true,
-        "title": "DuxNet Wallet",
+        "title": "DuxNet API Store",
         "width": 1200,
-        "height": 800
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600,
+        "center": true,
+        "decorations": true,
+        "transparent": false,
+        "visible": true
       }
     ]
   },
@@ -32,13 +38,12 @@
     "resources": [],
     "externalBin": [],
     "copyright": "",
-    "category": "Utility",
-    "shortDescription": "DuxNet Wallet Desktop Application",
-    "longDescription": "A secure desktop wallet for the DuxNet blockchain network",
+    "category": "DeveloperTool",
+    "shortDescription": "DuxNet API Store - Decentralized Service Marketplace",
+    "longDescription": "A comprehensive API store for registering, discovering, and managing decentralized services with built-in analytics and developer tools.",
     "linux": {
       "appimage": {
-        "bundleMediaFramework": false,
-        "files": {}
+        "bundleMediaFramework": false
       },
       "deb": {
         "files": {}

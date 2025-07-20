@@ -83,6 +83,22 @@ impl TaskEngine {
             completed_at: get_current_timestamp(),
         })
     }
+
+    pub async fn process_pending_tasks(&self) -> Result<()> {
+        // Get all pending tasks
+        let pending_tasks = {
+            let pending = self.pending_tasks.read().await;
+            pending.clone()
+        };
+
+        // Process each pending task (simplified - just log for now)
+        for (task_id, task) in pending_tasks {
+            info!("Processing pending task: {}", task_id.0);
+            // In a real implementation, this would dispatch tasks to available processors
+        }
+
+        Ok(())
+    }
 }
 
 // --- Service handler scaffolds ---
