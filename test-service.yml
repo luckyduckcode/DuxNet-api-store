@@ -1,0 +1,36 @@
+name: "hello-world-api"
+version: "1.0.0"
+description: "A simple Hello World API service"
+category: "demo"
+tags:
+  - "demo"
+  - "api"
+  - "hello-world"
+author:
+  name: "Test Developer"
+  email: "test@example.com"
+  did: "did:duxnet:test123"
+api:
+  openapi: "3.0.0"
+  base_path: "/api/v1"
+  endpoints:
+    - path: "/hello"
+      method: "GET"
+      description: "Returns a hello world message"
+container:
+  image: "nginx:latest"
+  ports:
+    - 8080
+  env:
+    PORT: "8080"
+    MESSAGE: "Hello from DuxNet!"
+  resources:
+    memory_mb: 256
+    cpu_cores: 0.5
+pricing:
+  model: "free"
+  per_request: 0
+  monthly_cap: 1000
+sla:
+  uptime_guarantee: 99.0
+  response_time_ms: 100

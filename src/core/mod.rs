@@ -4,7 +4,7 @@
 //! It aggregates and exposes submodules for identity, DHT, reputation, escrow, tasks, messaging, community fund, and shared data structures.
 //!
 //! ## Purpose
-//! - Implements the main node struct (`DuxNetNode`) and orchestrates all core platform features.
+//! - Implements the main node struct (`DuxNetNode`) and orchest        let txid = DUXCOIN_API.send_dux(ESCROW_DUXCOIN_ADDRESS, &provider_address, amount).await?;       let txid = DUXCOIN_API.send_dux(ESCROW_DUXCOIN_ADDRESS, &provider_address, amount).await?;ates all core platform features.
 //! - Provides abstractions for decentralized identity, distributed storage, reputation, escrow, task engine, and messaging.
 //! - Serves as the backbone for all higher-level modules (API, wallet, network, frontend).
 //!
@@ -39,24 +39,41 @@ pub mod escrow;
 pub mod tasks;
 pub mod community_fund;
 pub mod messaging;
+pub mod manifest;
+pub mod service_manager;
+pub mod analytics;
 
 use anyhow::Result;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, error};
+use crate::api::dux_coin::DuxCoinAPI;
+use std::sync::LazyLock;
 
 use data_structures::*;
 use dht::DHT;
+use service_manager::ServiceManager;
+
+// Global DuxCoin API instance
+static DUXCOIN_API: LazyLock<DuxCoinAPI> = LazyLock::new(|| {
+    DuxCoinAPI::new(
+        "http://localhost:8332".to_string(),
+        "rpcuser".to_string(),
+        "rpcpassword".to_string(),
+    )
+});
 use identity::DIDManager;
 use reputation::ReputationSystem;
 use escrow::EscrowManager;
 use tasks::TaskEngine;
 use community_fund::CommunityFundManager;
 use messaging::MessagingSystem;
+use analytics::AnalyticsEngine;
 
 // Add a constant for the platform escrow DuxCoin address
 const ESCROW_DUXCOIN_ADDRESS: &str = "<YOUR_ESCROW_DUXCOIN_ADDRESS_HERE>"; // Replace with your real address
 
+#[derive(Clone)]
 pub struct DuxNetNode {
     pub node_id: NodeId,
     pub did_manager: DIDManager,
@@ -66,8 +83,13 @@ pub struct DuxNetNode {
     pub task_engine: TaskEngine,
     pub community_fund_manager: Arc<CommunityFundManager>,
     pub messaging_system: Arc<MessagingSystem>,
+    pub service_manager: Arc<ServiceManager>,
+    /// P2P API Gateway for routing calls to services
+    pub api_gateway: Arc<crate::gateway::proxy::P2PApiGateway>,
     pub wallet: Arc<RwLock<crate::wallet::Wallet>>,
     pub is_running: Arc<RwLock<bool>>,
+    /// Phase 5: Advanced Analytics & Monitoring Engine
+    pub analytics_engine: Arc<AnalyticsEngine>,
 }
 
 impl DuxNetNode {
@@ -77,13 +99,17 @@ impl DuxNetNode {
         
         let did_manager = DIDManager::new(endpoints);
         let dht = DHT::new(node_id.clone());
+        let dht_arc = Arc::new(dht.clone());
         let reputation_system = ReputationSystem::new();
         let escrow_manager = EscrowManager::new();
-        let community_fund_manager = Arc::new(CommunityFundManager::new(Arc::new(dht.clone())));
+        let community_fund_manager = Arc::new(CommunityFundManager::new(dht_arc.clone()));
         let task_engine = TaskEngine::new().with_community_fund_manager(community_fund_manager.clone());
         let messaging_system = Arc::new(MessagingSystem::new(did_manager.clone()));
+        let service_manager = Arc::new(ServiceManager::new(dht_arc.clone()).await?);
+        let api_gateway = Arc::new(crate::gateway::proxy::P2PApiGateway::new(service_manager.clone()));
         let wallet = Arc::new(RwLock::new(crate::wallet::Wallet::new(did_manager.did.id.clone())?));
         let is_running = Arc::new(RwLock::new(false));
+        let analytics_engine = Arc::new(AnalyticsEngine::new());
 
         Ok(DuxNetNode {
             node_id,
@@ -94,8 +120,11 @@ impl DuxNetNode {
             task_engine,
             community_fund_manager,
             messaging_system,
+            service_manager,
+            api_gateway,
             wallet,
             is_running,
+            analytics_engine,
         })
     }
 
@@ -296,7 +325,7 @@ impl DuxNetNode {
 
         // 2. Send DuxCoin from buyer to escrow address
         // (Assume buyer_address is managed by the platform for now)
-        let txid = crate::api::handlers::DUXCOIN_API.send_dux(&buyer_address, ESCROW_DUXCOIN_ADDRESS, price).await?;
+        let txid = DUXCOIN_API.send_dux(&buyer_address, ESCROW_DUXCOIN_ADDRESS, price).await?;
 
         // 3. Create escrow contract (record txid, buyer, provider, amount, etc.)
         // (You may want to expand this with more escrow logic)
@@ -325,7 +354,7 @@ impl DuxNetNode {
     /// Release escrow funds to provider on task completion
     pub async fn release_escrow_to_provider(&self, provider_address: String, amount: u64) -> Result<String> {
         let amount_dux = amount as f64 / 100_000_000.0;
-        let txid = crate::api::handlers::DUXCOIN_API.send_dux(ESCROW_DUXCOIN_ADDRESS, &provider_address, amount_dux).await?;
+        let txid = DUXCOIN_API.send_dux(ESCROW_DUXCOIN_ADDRESS, &provider_address, amount_dux).await?;
         tracing::info!("Released {} DUX from escrow to provider {} (txid {})", amount_dux, provider_address, txid);
         Ok(txid)
     }

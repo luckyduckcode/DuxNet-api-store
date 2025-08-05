@@ -1,0 +1,54 @@
+# Example Free Utility Service
+name: "url-shortener"
+version: "1.2.3"
+description: "Free URL shortening service with analytics and custom domains"
+category: "utilities"
+tags: ["url", "shortener", "free", "analytics", "redirect"]
+
+author:
+  name: "OpenTools Collective"
+  did: "did:dux:short123456789abcdefghijklmnopqrstuvwxyz"
+  contact: "hello@opentools.dux"
+
+container:
+  image: "opentools/url-shortener:1.2.3"
+  ports: [8000, 8001]
+  env:
+    APP_PORT: "8000"
+    ADMIN_PORT: "8001"
+    REDIS_URL: "redis://localhost:6379"
+  resources:
+    cpu: "500m"
+    memory: "1Gi"
+
+api:
+  openapi: "3.0.0"
+  endpoints:
+    - path: "/shorten"
+      method: "POST"
+      description: "Create a shortened URL"
+      pricing:
+        model: "free"
+        amount: 0.0
+        currency: "DUX"
+    - path: "/expand"
+      method: "GET"
+      description: "Get original URL from short code"
+      pricing:
+        model: "free"
+        amount: 0.0
+        currency: "DUX"
+    - path: "/analytics"
+      method: "GET"
+      description: "Get click analytics for shortened URLs"
+      pricing:
+        model: "free"
+        amount: 0.0
+        currency: "DUX"
+
+pricing: "free"
+
+sla:
+  uptime: 95.0
+  response_time_ms: 100
+  throughput_rps: 1000

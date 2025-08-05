@@ -25,11 +25,13 @@
 //! - Consider extracting sub-routers for large features (e.g., wallet, messaging).
 //!
 //! This structure makes it easy to extend the API with new endpoints and middleware in a maintainable way.
-use axum::{routing::{get, post, put, delete}, Router};
+use axum::{routing::{get, post, put, delete}, Router, middleware};
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::ServeDir;
 use crate::api::handlers::*;
+use crate::api::marketplace::*;
 use crate::api::state::ApiState;
+use crate::api::middleware::{timeout_middleware, rate_limit_middleware};
 use axum::http::Method;
 
 pub fn create_router(state: ApiState) -> Router {
@@ -39,6 +41,7 @@ pub fn create_router(state: ApiState) -> Router {
 
     Router::new()
         // Core API endpoints
+        .route("/api/health", get(get_health_status))
         .route("/api/status", get(get_status))
         .route("/api/stats", get(get_stats))
         .route("/api/version", get(get_api_version))
@@ -54,6 +57,26 @@ pub fn create_router(state: ApiState) -> Router {
         .route("/api/services/categories", get(get_service_categories))
         .route("/api/services/trending", get(get_trending_services))
         
+        // YAML Manifest Management
+        .route("/api/services/manifest", post(register_service_manifest))
+        .route("/api/services/manifest/:service_id", get(get_service_manifest))
+        .route("/api/services/manifest/:service_id", delete(remove_service_manifest))
+        
+        // Phase 2: Service Manager Endpoints
+        .route("/api/services/list", get(list_deployed_services))
+        .route("/api/services/status/:service_id", get(get_service_status))
+        .route("/api/services/stats", get(get_service_manager_stats))
+        
+        // Phase 3: P2P API Gateway Endpoints
+        
+        // Phase 4: Marketplace & Enhanced Discovery
+        .route("/api/marketplace/search", get(search_marketplace))
+        .route("/api/marketplace/popular", get(get_popular_services))
+        .route("/api/marketplace/featured", get(get_featured_services))
+        .route("/api/marketplace/categories", get(get_categories))
+        .route("/api/marketplace/tags", get(get_tags))
+        .route("/api/marketplace/stats", get(get_marketplace_stats))
+        
         // Service Reviews & Ratings
         .route("/api/services/:service_id/reviews", get(get_service_reviews))
         .route("/api/services/:service_id/reviews", post(add_service_review))
@@ -68,12 +91,12 @@ pub fn create_router(state: ApiState) -> Router {
         .route("/api/tasks", get(get_user_tasks))
         
         // Escrow & Payments
-        .route("/api/escrow/create", post(create_escrow))
+        // .route("/api/escrow/create", post(create_escrow))
         .route("/api/escrow/:escrow_id", get(get_escrow_details))
         .route("/api/escrow/:escrow_id/sign", post(sign_escrow))
         
         // Reputation System
-        .route("/api/reputation/:did", get(get_reputation))
+        // .route("/api/reputation/:did", get(get_reputation))
         .route("/api/reputation/attest", post(add_reputation_attestation))
         
         // Wallet Operations
@@ -84,19 +107,27 @@ pub fn create_router(state: ApiState) -> Router {
         .route("/api/wallet/receive", post(receive_funds))
         .route("/api/wallet/transactions", get(get_transaction_history))
         .route("/api/wallet/transaction/:id", get(get_transaction_by_id))
-        .route("/api/wallet/backup", get(backup_wallet))
+        .route("/api/wallet/backup", post(backup_wallet))
         .route("/api/wallet/restore", post(restore_wallet))
         .route("/api/wallet/keys", get(get_wallet_keys))
+        .route("/api/wallet/validate/:address", get(validate_dux_address))
+        .route("/api/wallet/encrypt", post(encrypt_wallet))
+        .route("/api/wallet/unlock", post(unlock_wallet))
+        .route("/api/wallet/generate-address", post(generate_new_address))
+        .route("/api/wallet/export", get(export_private_keys))
+        .route("/api/wallet/import", post(import_private_key))
         
         // DUX Coin Integration
         .route("/api/dux/balance", get(get_dux_balance))
         .route("/api/dux/transactions", get(get_dux_transactions))
         .route("/api/dux/send", post(send_dux))
         .route("/api/dux/network", get(get_dux_network))
-        .route("/api/dux/mine/start", post(start_dux_mining))
-        .route("/api/dux/mine/stop", post(stop_dux_mining))
-        .route("/api/dux/mine/status", get(get_dux_mining_status))
         .route("/api/dux/sync", post(sync_dux_balance))
+        .route("/api/dux/stake", post(stake_dux))
+        .route("/api/dux/staking/info", get(get_staking_info))
+        .route("/api/dux/mining/status", get(get_mining_status))
+        .route("/api/dux/mining/start", post(start_mining))
+        .route("/api/dux/mining/stop", post(stop_mining))
         
         // API Management & Analytics
         .route("/api/analytics/usage", get(get_usage_analytics))
@@ -105,6 +136,21 @@ pub fn create_router(state: ApiState) -> Router {
         .route("/api/analytics/revenue", get(get_revenue_analytics))
         .route("/api/rate-limits/:api_key", get(get_rate_limit_info))
         .route("/api/rate-limits/:api_key", put(update_rate_limit))
+        
+        // Phase 5: Advanced Analytics & Monitoring
+        .route("/api/analytics/snapshot", get(get_analytics_snapshot))
+        .route("/api/analytics/metrics", get(get_metrics))
+        .route("/api/analytics/metrics", post(record_metric))
+        .route("/api/analytics/service-metrics", post(record_service_metrics))
+        .route("/api/analytics/summary", get(get_analytics_summary))
+        .route("/api/analytics/alerts", get(get_active_alerts))
+        .route("/api/analytics/alerts", post(add_alert_rule))
+        .route("/api/analytics/alerts/:alert_id", delete(resolve_alert))
+        .route("/api/analytics/dashboards", get(get_dashboards))
+        .route("/api/analytics/dashboards", post(create_dashboard))
+        .route("/api/analytics/dashboards/:dashboard_id", get(get_dashboard))
+        .route("/api/analytics/dashboards/:dashboard_id", put(update_dashboard))
+        .route("/api/analytics/dashboards/:dashboard_id", delete(delete_dashboard))
         
         // Developer Portal
         .route("/api/developer/keys", get(get_api_keys))
@@ -122,6 +168,18 @@ pub fn create_router(state: ApiState) -> Router {
         .route("/api/community_fund/balance/:currency", get(get_community_fund_balance))
         .route("/api/community_fund/distribute/:currency", post(distribute_community_fund))
         
+        // P2P Gateway Routes (NEW - Vision Completion)
+        .route("/api/gateway/proxy/:service_id/*path", 
+               get(proxy_p2p_request)
+               .post(proxy_p2p_request)
+               .put(proxy_p2p_request)
+               .delete(proxy_p2p_request))
+        .route("/api/gateway/stats", get(get_gateway_stats))
+        
+        // P2P Service Discovery (NEW - Vision Completion)
+        .route("/api/discovery/services", get(discover_p2p_services))
+        .route("/api/discovery/service/:service_id", get(discover_service_endpoints))
+        
         // Messaging
         .route("/api/messaging/send", post(send_message))
         .route("/api/messaging/conversations", get(get_conversations))
@@ -136,7 +194,9 @@ pub fn create_router(state: ApiState) -> Router {
         // Web Interface
         .route("/", get(serve_index))
         .route("/index.html", get(serve_index))
-        .nest_service("/static", ServeDir::new("static"))
+        .nest_service("/static", ServeDir::new("frontend"))
+        .layer(middleware::from_fn(timeout_middleware))
+        .layer(middleware::from_fn(rate_limit_middleware))
         .layer(cors)
         .with_state(state)
 } 

@@ -6,6 +6,8 @@ pub mod dux_coin;
 pub mod state;
 pub mod handlers;
 pub mod routes;
+pub mod marketplace;
+pub mod middleware;
 
 use state::ApiState;
 use routes::create_router;

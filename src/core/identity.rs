@@ -2,13 +2,23 @@ use crate::core::data_structures::*;
 use anyhow::Result;
 use ed25519_dalek::{SigningKey, Signer, Verifier};
 use rand::rngs::OsRng;
+use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct DIDManager {
     pub secret_key: Vec<u8>, // Store only the secret key bytes
+    #[serde(skip, default = "default_keypair")]
     pub keypair: SigningKey,
     pub did: DID,
+}
+
+fn default_keypair() -> SigningKey {
+    use rand::RngCore;
+    let mut rng = OsRng;
+    let mut secret_bytes = [0u8; 32];
+    rng.fill_bytes(&mut secret_bytes);
+    SigningKey::from_bytes(&secret_bytes)
 }
 
 impl DIDManager {
@@ -28,6 +38,17 @@ impl DIDManager {
         };
         info!("Created new DID: {}", did.id);
         DIDManager { secret_key: keypair.to_bytes().to_vec(), keypair, did }
+    }
+
+    /// Restore the keypair from the secret key (used after deserialization)
+    pub fn restore_keypair(&mut self) -> Result<()> {
+        if self.secret_key.len() != 32 {
+            return Err(anyhow::anyhow!("Invalid secret key length"));
+        }
+        let mut key_bytes = [0u8; 32];
+        key_bytes.copy_from_slice(&self.secret_key);
+        self.keypair = SigningKey::from_bytes(&key_bytes);
+        Ok(())
     }
 
     pub fn sign_message(&self, message: &[u8]) -> Vec<u8> {

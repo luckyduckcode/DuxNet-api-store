@@ -999,4 +999,12 @@ window.copyApiKey = (key) => duxnetFrontend.copyApiKey(key);
 window.revokeApiKey = (keyId) => duxnetFrontend.revokeApiKey(keyId);
 window.subscribeToService = (serviceId) => duxnetFrontend.subscribeToService(serviceId);
 window.viewServiceDetails = (serviceId) => duxnetFrontend.viewServiceDetails(serviceId);
-window.closeModal = (modalId) => duxnetFrontend.closeModal(modalId); 
+window.closeModal = (modalId) => duxnetFrontend.closeModal(modalId);
+
+// Mobile navigation toggle function
+window.toggleMobileMenu = () => {
+    const navMenu = document.querySelector('.nav-menu');
+    if (navMenu) {
+        navMenu.classList.toggle('active');
+    }
+}; 

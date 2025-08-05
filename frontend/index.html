@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DuxNet - Decentralized API Marketplace</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/static/style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
     <!-- Navigation -->
@@ -32,11 +33,17 @@
                 <a href="#network" class="nav-link" data-tab="network">
                     <i class="fas fa-network-wired"></i> P2P Network
                 </a>
+                <a href="#wallet" class="nav-link" data-tab="wallet">
+                    <i class="fas fa-wallet"></i> DuxCoin Wallet
+                </a>
+            </div>
+            <div class="nav-mobile-toggle" onclick="toggleMobileMenu()">
+                <i class="fas fa-bars"></i>
             </div>
             <div class="nav-user">
                 <div class="user-info">
                     <span class="user-did">did:duxnet:user123</span>
-                    <span class="user-balance">500.00 DUX</span>
+                    <span class="user-balance" id="nav-balance">500.00 DUX</span>
                 </div>
                 <div class="user-avatar">
                     <i class="fas fa-user"></i>
@@ -49,104 +56,342 @@
     <main class="main-content">
         <!-- Dashboard Tab -->
         <div id="dashboard" class="tab-content active">
-            <div class="dashboard-header">
-                <h1>DuxNet Dashboard</h1>
-                <p>Decentralized API Marketplace powered by P2P technology</p>
+            <!-- Hero Section -->
+            <div class="hero-section">
+                <div class="hero-content">
+                    <h1 class="hero-title">
+                        <span class="gradient-text">DuxNet</span> Dashboard
+                    </h1>
+                    <p class="hero-subtitle">
+                        Decentralized API Marketplace powered by P2P technology
+                    </p>
+                    <div class="hero-stats">
+                        <div class="hero-stat">
+                            <span class="hero-stat-value" id="networkHealth">99.9%</span>
+                            <span class="hero-stat-label">Network Health</span>
+                        </div>
+                        <div class="hero-stat">
+                            <span class="hero-stat-value" id="totalNodes">247</span>
+                            <span class="hero-stat-label">Active Nodes</span>
+                        </div>
+                        <div class="hero-stat">
+                            <span class="hero-stat-value" id="totalVolume">1.2M</span>
+                            <span class="hero-stat-label">API Calls Today</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    <div class="network-visualization">
+                        <div class="network-node central-node">
+                            <i class="fas fa-server"></i>
+                        </div>
+                        <div class="network-node peer-node node-1">
+                            <i class="fas fa-laptop"></i>
+                        </div>
+                        <div class="network-node peer-node node-2">
+                            <i class="fas fa-mobile-alt"></i>
+                        </div>
+                        <div class="network-node peer-node node-3">
+                            <i class="fas fa-desktop"></i>
+                        </div>
+                        <div class="network-connection conn-1"></div>
+                        <div class="network-connection conn-2"></div>
+                        <div class="network-connection conn-3"></div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Status Cards -->
-            <div class="status-grid">
-                <div class="status-card">
-                    <div class="status-icon">
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
                         <i class="fas fa-server"></i>
                     </div>
-                    <div class="status-info">
-                        <h3>Active Services</h3>
-                        <p class="status-value" id="activeServices">0</p>
-                        <span class="status-change positive">+12% this week</span>
+                    <div class="stat-value" id="activeServices">42</div>
+                    <div class="stat-label">Active Services</div>
+                    <div class="stat-change positive">
+                        <i class="fas fa-arrow-up"></i>
+                        +12% this week
                     </div>
                 </div>
 
-                <div class="status-card">
-                    <div class="status-icon">
+                <div class="stat-card">
+                    <div class="stat-icon">
                         <i class="fas fa-users"></i>
                     </div>
-                    <div class="status-info">
-                        <h3>P2P Peers</h3>
-                        <p class="status-value" id="p2pPeers">0</p>
-                        <span class="status-change positive">Connected</span>
+                    <div class="stat-value" id="p2pPeers">247</div>
+                    <div class="stat-label">P2P Peers</div>
+                    <div class="stat-change positive">
+                        <i class="fas fa-circle" style="color: var(--success-color);"></i>
+                        Online
                     </div>
                 </div>
 
-                <div class="status-card">
-                    <div class="status-icon">
+                <div class="stat-card">
+                    <div class="stat-icon">
                         <i class="fas fa-coins"></i>
                     </div>
-                    <div class="status-info">
-                        <h3>Total Revenue</h3>
-                        <p class="status-value" id="totalRevenue">0 DUX</p>
-                        <span class="status-change positive">+25% this month</span>
+                    <div class="stat-value" id="totalRevenue">1,247 DUX</div>
+                    <div class="stat-label">Total Revenue</div>
+                    <div class="stat-change positive">
+                        <i class="fas fa-arrow-up"></i>
+                        +25% this month
                     </div>
                 </div>
 
-                <div class="status-card">
-                    <div class="status-icon">
+                <div class="stat-card">
+                    <div class="stat-icon">
                         <i class="fas fa-chart-line"></i>
                     </div>
-                    <div class="status-info">
-                        <h3>API Requests</h3>
-                        <p class="status-value" id="apiRequests">0</p>
-                        <span class="status-change positive">+8% today</span>
+                    <div class="stat-value" id="apiRequests">1.2M</div>
+                    <div class="stat-label">API Requests</div>
+                    <div class="stat-change positive">
+                        <i class="fas fa-arrow-up"></i>
+                        +8% today
                     </div>
                 </div>
             </div>
 
-            <!-- Quick Actions -->
-            <div class="quick-actions">
-                <h2>Quick Actions</h2>
-                <div class="action-grid">
-                    <button class="action-btn" onclick="showServiceRegistration()">
-                        <i class="fas fa-plus"></i>
-                        <span>Register Service</span>
-                    </button>
-                    <button class="action-btn" onclick="showServiceSearch()">
-                        <i class="fas fa-search"></i>
-                        <span>Find Services</span>
-                    </button>
-                    <button class="action-btn" onclick="showAnalytics()">
-                        <i class="fas fa-chart-bar"></i>
-                        <span>View Analytics</span>
-                    </button>
-                    <button class="action-btn" onclick="showDeveloperPortal()">
-                        <i class="fas fa-code"></i>
-                        <span>Developer Portal</span>
-                    </button>
+            <!-- Quick Actions Section -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Quick Actions</h2>
+                    <p class="card-subtitle">Common tasks and operations</p>
+                </div>
+                <div class="card-body">
+                    <div class="action-grid">
+                        <button class="action-btn primary" onclick="showServiceRegistration()">
+                            <div class="action-icon">
+                                <i class="fas fa-plus"></i>
+                            </div>
+                            <div class="action-content">
+                                <span class="action-title">Register Service</span>
+                                <span class="action-desc">Add your API to the marketplace</span>
+                            </div>
+                        </button>
+                        <button class="action-btn secondary" onclick="switchTab('marketplace')">
+                            <div class="action-icon">
+                                <i class="fas fa-search"></i>
+                            </div>
+                            <div class="action-content">
+                                <span class="action-title">Find Services</span>
+                                <span class="action-desc">Discover APIs in the network</span>
+                            </div>
+                        </button>
+                        <button class="action-btn accent" onclick="switchTab('analytics')">
+                            <div class="action-icon">
+                                <i class="fas fa-chart-bar"></i>
+                            </div>
+                            <div class="action-content">
+                                <span class="action-title">View Analytics</span>
+                                <span class="action-desc">Monitor your service performance</span>
+                            </div>
+                        </button>
+                        <button class="action-btn success" onclick="switchTab('developer')">
+                            <div class="action-icon">
+                                <i class="fas fa-code"></i>
+                            </div>
+                            <div class="action-content">
+                                <span class="action-title">Developer Portal</span>
+                                <span class="action-desc">Access developer tools and docs</span>
+                            </div>
+                        </button>
+                    </div>
                 </div>
             </div>
 
             <!-- Recent Activity -->
-            <div class="recent-activity">
-                <h2>Recent Activity</h2>
-                <div class="activity-list" id="activityList">
-                    <!-- Activity items will be populated by JavaScript -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Recent Activity</h2>
+                    <p class="card-subtitle">Latest events and transactions</p>
+                </div>
+                <div class="card-body">
+                    <div class="activity-list" id="activityList">
+                        <!-- Activity items will be populated by JavaScript -->
+                        <div class="activity-item">
+                            <div class="activity-icon success">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <div class="activity-content">
+                                <p class="activity-title">Service "AI Text Analyzer" registered successfully</p>
+                                <p class="activity-time">2 minutes ago</p>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-icon info">
+                                <i class="fas fa-user-plus"></i>
+                            </div>
+                            <div class="activity-content">
+                                <p class="activity-title">New peer connected to network</p>
+                                <p class="activity-time">5 minutes ago</p>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-icon warning">
+                                <i class="fas fa-coins"></i>
+                            </div>
+                            <div class="activity-content">
+                                <p class="activity-title">Payment received: 50 DUX</p>
+                                <p class="activity-time">10 minutes ago</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Marketplace Tab -->
         <div id="marketplace" class="tab-content">
-            <div class="marketplace-header">
-                <h1>API Marketplace</h1>
-                <p>Discover and connect to decentralized API services</p>
+            <!-- Marketplace Header -->
+            <div class="section-header">
+                <div class="header-content">
+                    <h1 class="section-title">
+                        <span class="gradient-text">API Marketplace</span>
+                    </h1>
+                    <p class="section-subtitle">
+                        Discover and connect to decentralized API services across the P2P network
+                    </p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-primary" onclick="showServiceRegistration()">
+                        <i class="fas fa-plus"></i>
+                        List Your API
+                    </button>
+                </div>
             </div>
 
-            <!-- Search and Filters -->
-            <div class="search-section">
-                <div class="search-bar">
-                    <input type="text" id="serviceSearch" placeholder="Search for APIs...">
-                    <button onclick="searchServices()">
-                        <i class="fas fa-search"></i>
-                    </button>
+            <!-- Search and Filters Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Search & Filters</h2>
+                    <p class="card-subtitle">Find the perfect API for your needs</p>
+                </div>
+                <div class="card-body">
+                    <div class="search-controls">
+                        <div class="search-bar-enhanced">
+                            <div class="search-input-group">
+                                <i class="fas fa-search search-icon"></i>
+                                <input type="text" id="serviceSearch" placeholder="Search APIs, categories, or keywords..." class="search-input">
+                                <button class="search-btn" onclick="searchServices()">
+                                    Search
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="filter-grid">
+                            <div class="filter-group">
+                                <label for="categoryFilter">Category</label>
+                                <select id="categoryFilter" class="filter-select">
+                                    <option value="">All Categories</option>
+                                    <option value="ai">AI & Machine Learning</option>
+                                    <option value="data">Data Processing</option>
+                                    <option value="blockchain">Blockchain</option>
+                                    <option value="utility">Utilities</option>
+                                    <option value="analytics">Analytics</option>
+                                </select>
+                            </div>
+                            
+                            <div class="filter-group">
+                                <label for="sortFilter">Sort By</label>
+                                <select id="sortFilter" class="filter-select">
+                                    <option value="popularity">Most Popular</option>
+                                    <option value="rating">Highest Rated</option>
+                                    <option value="price-low">Price: Low to High</option>
+                                    <option value="price-high">Price: High to Low</option>
+                                    <option value="newest">Newest First</option>
+                                </select>
+                            </div>
+                            
+                            <div class="filter-group">
+                                <label for="priceRange">Max Price (DUX)</label>
+                                <div class="price-range-container">
+                                    <input type="range" id="priceRange" min="0" max="1000" value="1000" class="price-range">
+                                    <span id="priceValue" class="price-value">Max: 1000 DUX</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Featured Services -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Featured Services</h2>
+                    <p class="card-subtitle">Trending APIs in the network</p>
+                </div>
+                <div class="card-body">
+                    <div class="featured-services-grid">
+                        <div class="featured-service">
+                            <div class="featured-badge">Featured</div>
+                            <div class="service-icon ai">
+                                <i class="fas fa-brain"></i>
+                            </div>
+                            <h3>AI Text Analyzer</h3>
+                            <p>Advanced natural language processing with sentiment analysis</p>
+                            <div class="service-stats">
+                                <span class="stat"><i class="fas fa-star"></i> 4.9</span>
+                                <span class="stat"><i class="fas fa-users"></i> 1.2k</span>
+                                <span class="stat"><i class="fas fa-bolt"></i> 99.9%</span>
+                            </div>
+                            <div class="service-price">50 DUX/1k requests</div>
+                        </div>
+                        
+                        <div class="featured-service">
+                            <div class="featured-badge trending">Trending</div>
+                            <div class="service-icon data">
+                                <i class="fas fa-database"></i>
+                            </div>
+                            <h3>Data Transformer</h3>
+                            <p>Real-time data processing and format conversion</p>
+                            <div class="service-stats">
+                                <span class="stat"><i class="fas fa-star"></i> 4.7</span>
+                                <span class="stat"><i class="fas fa-users"></i> 856</span>
+                                <span class="stat"><i class="fas fa-bolt"></i> 98.5%</span>
+                            </div>
+                            <div class="service-price">25 DUX/1k requests</div>
+                        </div>
+                        
+                        <div class="featured-service">
+                            <div class="featured-badge new">New</div>
+                            <div class="service-icon blockchain">
+                                <i class="fas fa-link"></i>
+                            </div>
+                            <h3>Blockchain Oracle</h3>
+                            <p>Secure and reliable off-chain data for smart contracts</p>
+                            <div class="service-stats">
+                                <span class="stat"><i class="fas fa-star"></i> 4.8</span>
+                                <span class="stat"><i class="fas fa-users"></i> 432</span>
+                                <span class="stat"><i class="fas fa-bolt"></i> 99.2%</span>
+                            </div>
+                            <div class="service-price">100 DUX/1k requests</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Service Grid -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">All Services</h2>
+                    <p class="card-subtitle">Browse all available APIs in the marketplace</p>
+                </div>
+                <div class="card-body">
+                    <div class="services-grid" id="servicesGrid">
+                        <!-- Service cards will be populated by JavaScript -->
+                    </div>
+                    
+                    <!-- Load More Button -->
+                    <div class="load-more-container">
+                        <button class="btn-secondary" id="loadMoreBtn" onclick="loadMoreServices()">
+                            <i class="fas fa-plus"></i>
+                            Load More Services
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
                 </div>
                 <div class="filter-section">
                     <select id="categoryFilter">
@@ -414,6 +659,236 @@
                 </div>
             </div>
         </div>
+
+        <!-- DuxCoin Wallet Tab -->
+        <div id="wallet" class="tab-content">
+            <div class="wallet-header">
+                <h1><i class="fas fa-wallet"></i> DuxCoin Wallet</h1>
+                <p>Manage your DuxCoin funds with enterprise-grade security</p>
+            </div>
+
+            <!-- Wallet Overview -->
+            <div class="wallet-overview">
+                <div class="balance-card main-balance">
+                    <div class="balance-header">
+                        <h2>Total Balance</h2>
+                        <div class="balance-actions">
+                            <button class="btn-icon" onclick="refreshBalance()" title="Refresh Balance">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                            <button class="btn-icon" onclick="toggleBalanceVisibility()" title="Hide/Show Balance">
+                                <i class="fas fa-eye" id="balanceVisibilityIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="balance-amount">
+                        <span class="currency-symbol">DUX</span>
+                        <span class="balance-value" id="mainBalance">0.00000000</span>
+                        <span class="balance-fiat" id="balanceFiat">≈ $0.00 USD</span>
+                    </div>
+                    <div class="balance-breakdown">
+                        <div class="balance-item">
+                            <span class="label">Available:</span>
+                            <span class="value" id="availableBalance">0.00000000 DUX</span>
+                        </div>
+                        <div class="balance-item">
+                            <span class="label">Pending:</span>
+                            <span class="value" id="pendingBalance">0.00000000 DUX</span>
+                        </div>
+                        <div class="balance-item">
+                            <span class="label">Staked:</span>
+                            <span class="value" id="stakedBalance">0.00000000 DUX</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="wallet-actions">
+                    <button class="wallet-btn primary" onclick="showSendModal()">
+                        <i class="fas fa-paper-plane"></i>
+                        <span>Send</span>
+                    </button>
+                    <button class="wallet-btn secondary" onclick="showReceiveModal()">
+                        <i class="fas fa-qrcode"></i>
+                        <span>Receive</span>
+                    </button>
+                    <button class="wallet-btn tertiary" onclick="showStakeModal()">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Stake</span>
+                    </button>
+                    <button class="wallet-btn tertiary" onclick="showMiningPanel()">
+                        <i class="fas fa-hammer"></i>
+                        <span>Mine</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Wallet Content Grid -->
+            <div class="wallet-grid">
+                <!-- Transaction History -->
+                <div class="wallet-card transaction-history">
+                    <div class="card-header">
+                        <h3><i class="fas fa-history"></i> Recent Transactions</h3>
+                        <div class="card-actions">
+                            <select id="txFilter" onchange="filterTransactions()">
+                                <option value="all">All Transactions</option>
+                                <option value="sent">Sent</option>
+                                <option value="received">Received</option>
+                                <option value="mining">Mining Rewards</option>
+                                <option value="staking">Staking Rewards</option>
+                            </select>
+                            <button class="btn-icon" onclick="exportTransactions()" title="Export CSV">
+                                <i class="fas fa-download"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="transaction-list" id="transactionList">
+                        <div class="transaction-placeholder">
+                            <i class="fas fa-inbox"></i>
+                            <p>No transactions yet</p>
+                            <small>Your transaction history will appear here</small>
+                        </div>
+                    </div>
+                    <div class="transaction-pagination">
+                        <button class="btn-pagination" onclick="loadMoreTransactions()">Load More</button>
+                    </div>
+                </div>
+
+                <!-- Address Management -->
+                <div class="wallet-card address-management">
+                    <div class="card-header">
+                        <h3><i class="fas fa-address-book"></i> Addresses</h3>
+                        <button class="btn-sm primary" onclick="generateNewAddress()">
+                            <i class="fas fa-plus"></i> New Address
+                        </button>
+                    </div>
+                    <div class="address-list" id="addressList">
+                        <!-- Addresses will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Portfolio Analytics -->
+                <div class="wallet-card portfolio-analytics">
+                    <div class="card-header">
+                        <h3><i class="fas fa-chart-pie"></i> Portfolio</h3>
+                        <div class="time-selector">
+                            <button class="time-btn active" data-period="24h">24H</button>
+                            <button class="time-btn" data-period="7d">7D</button>
+                            <button class="time-btn" data-period="30d">30D</button>
+                            <button class="time-btn" data-period="1y">1Y</button>
+                        </div>
+                    </div>
+                    <div class="portfolio-chart">
+                        <canvas id="portfolioChart" width="400" height="300"></canvas>
+                    </div>
+                    <div class="portfolio-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">24h Change</span>
+                            <span class="stat-value positive" id="dayChange">+5.67%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">7d Change</span>
+                            <span class="stat-value negative" id="weekChange">-2.34%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Market Cap</span>
+                            <span class="stat-value" id="marketCap">$1.2B</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mining Dashboard -->
+                <div class="wallet-card mining-dashboard" id="miningDashboard" style="display: none;">
+                    <div class="card-header">
+                        <h3><i class="fas fa-hammer"></i> Mining Dashboard</h3>
+                        <div class="mining-toggle">
+                            <button class="btn-sm" id="miningToggleBtn" onclick="toggleMining()">
+                                <i class="fas fa-play"></i> Start Mining
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mining-stats">
+                        <div class="mining-stat">
+                            <span class="label">Hash Rate</span>
+                            <span class="value" id="hashRate">0 H/s</span>
+                        </div>
+                        <div class="mining-stat">
+                            <span class="label">Accepted Shares</span>
+                            <span class="value" id="acceptedShares">0</span>
+                        </div>
+                        <div class="mining-stat">
+                            <span class="label">Total Rewards</span>
+                            <span class="value" id="miningRewards">0.00000000 DUX</span>
+                        </div>
+                        <div class="mining-stat">
+                            <span class="label">Power Usage</span>
+                            <span class="value" id="powerUsage">0W</span>
+                        </div>
+                    </div>
+                    <div class="mining-chart">
+                        <canvas id="miningChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+
+                <!-- Network Information -->
+                <div class="wallet-card network-info">
+                    <div class="card-header">
+                        <h3><i class="fas fa-network-wired"></i> Network Info</h3>
+                        <div class="network-status-indicator">
+                            <span class="status-dot connected"></span>
+                            <span id="networkStatus">Connected</span>
+                        </div>
+                    </div>
+                    <div class="network-stats">
+                        <div class="network-stat">
+                            <span class="label">Block Height</span>
+                            <span class="value" id="blockHeight">0</span>
+                        </div>
+                        <div class="network-stat">
+                            <span class="label">Difficulty</span>
+                            <span class="value" id="networkDifficulty">0</span>
+                        </div>
+                        <div class="network-stat">
+                            <span class="label">Network Hash Rate</span>
+                            <span class="value" id="networkHashRate">0 H/s</span>
+                        </div>
+                        <div class="network-stat">
+                            <span class="label">Connected Peers</span>
+                            <span class="value" id="peerCount">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security Settings -->
+                <div class="wallet-card security-settings">
+                    <div class="card-header">
+                        <h3><i class="fas fa-shield-alt"></i> Security</h3>
+                    </div>
+                    <div class="security-options">
+                        <div class="security-option">
+                            <div class="option-info">
+                                <span class="option-title">Wallet Encryption</span>
+                                <span class="option-desc">Encrypt your wallet with a passphrase</span>
+                            </div>
+                            <button class="btn-sm secondary" onclick="showEncryptionModal()">Configure</button>
+                        </div>
+                        <div class="security-option">
+                            <div class="option-info">
+                                <span class="option-title">Backup Wallet</span>
+                                <span class="option-desc">Create a secure backup of your wallet</span>
+                            </div>
+                            <button class="btn-sm secondary" onclick="backupWallet()">Backup</button>
+                        </div>
+                        <div class="security-option">
+                            <div class="option-info">
+                                <span class="option-title">Import Private Key</span>
+                                <span class="option-desc">Import an existing private key</span>
+                            </div>
+                            <button class="btn-sm secondary" onclick="showImportModal()">Import</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
 
     <!-- Notifications -->
@@ -466,6 +941,229 @@
       </div>
     </div>
 
-    <script src="script.js"></script>
+    <!-- Wallet Modals -->
+    
+    <!-- Send DuxCoin Modal -->
+    <div id="sendModal" class="modal wallet-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-paper-plane"></i> Send DuxCoin</h2>
+                <span class="close" onclick="closeSendModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="sendForm" onsubmit="sendDuxCoin(event)">
+                    <div class="form-group">
+                        <label for="sendAddress">Recipient Address</label>
+                        <input type="text" id="sendAddress" placeholder="DUX address or contact name" required>
+                        <button type="button" class="btn-icon address-book-btn" onclick="showAddressBook()">
+                            <i class="fas fa-address-book"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="sendAmount">Amount</label>
+                        <div class="amount-input">
+                            <input type="number" id="sendAmount" step="0.00000001" min="0" placeholder="0.00000000" required>
+                            <span class="currency-label">DUX</span>
+                            <button type="button" class="btn-max" onclick="setMaxAmount()">MAX</button>
+                        </div>
+                        <div class="amount-fiat" id="sendAmountFiat">≈ $0.00 USD</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="sendFee">Transaction Fee</label>
+                        <div class="fee-selector">
+                            <div class="fee-option" data-fee="slow">
+                                <input type="radio" name="feeOption" value="slow" id="feeSlow">
+                                <label for="feeSlow">
+                                    <span class="fee-type">Slow</span>
+                                    <span class="fee-time">~30 min</span>
+                                    <span class="fee-amount">0.0001 DUX</span>
+                                </label>
+                            </div>
+                            <div class="fee-option" data-fee="normal">
+                                <input type="radio" name="feeOption" value="normal" id="feeNormal" checked>
+                                <label for="feeNormal">
+                                    <span class="fee-type">Normal</span>
+                                    <span class="fee-time">~10 min</span>
+                                    <span class="fee-amount">0.0002 DUX</span>
+                                </label>
+                            </div>
+                            <div class="fee-option" data-fee="fast">
+                                <input type="radio" name="feeOption" value="fast" id="feeFast">
+                                <label for="feeFast">
+                                    <span class="fee-type">Fast</span>
+                                    <span class="fee-time">~3 min</span>
+                                    <span class="fee-amount">0.0005 DUX</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="sendNote">Note (Optional)</label>
+                        <textarea id="sendNote" rows="3" placeholder="Add a note for this transaction"></textarea>
+                    </div>
+                    
+                    <div class="transaction-summary">
+                        <div class="summary-row">
+                            <span>Amount:</span>
+                            <span id="summaryAmount">0.00000000 DUX</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Fee:</span>
+                            <span id="summaryFee">0.0002 DUX</span>
+                        </div>
+                        <div class="summary-row total">
+                            <span>Total:</span>
+                            <span id="summaryTotal">0.00000000 DUX</span>
+                        </div>
+                    </div>
+                    
+                    <div id="sendStatus" class="status-message"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn secondary" onclick="closeSendModal()">Cancel</button>
+                <button type="submit" form="sendForm" class="btn primary">
+                    <i class="fas fa-paper-plane"></i> Send DuxCoin
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receive DuxCoin Modal -->
+    <div id="receiveModal" class="modal wallet-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-qrcode"></i> Receive DuxCoin</h2>
+                <span class="close" onclick="closeReceiveModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="receive-content">
+                    <div class="qr-section">
+                        <div class="qr-code" id="qrCode">
+                            <!-- QR Code will be generated here -->
+                        </div>
+                        <div class="qr-actions">
+                            <button class="btn-icon" onclick="refreshQRCode()" title="Generate New Address">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                            <button class="btn-icon" onclick="downloadQRCode()" title="Download QR Code">
+                                <i class="fas fa-download"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="address-section">
+                        <div class="form-group">
+                            <label for="receiveAddress">Your DuxCoin Address</label>
+                            <div class="address-input">
+                                <input type="text" id="receiveAddress" readonly value="">
+                                <button class="btn-icon" onclick="copyAddress()" title="Copy Address">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="requestAmount">Request Amount (Optional)</label>
+                            <input type="number" id="requestAmount" step="0.00000001" min="0" placeholder="0.00000000">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="requestMessage">Message (Optional)</label>
+                            <textarea id="requestMessage" rows="2" placeholder="Add a message for the sender"></textarea>
+                        </div>
+                        
+                        <div class="share-options">
+                            <button class="btn secondary" onclick="sharePaymentLink()">
+                                <i class="fas fa-share"></i> Share Payment Link
+                            </button>
+                            <button class="btn secondary" onclick="emailPaymentRequest()">
+                                <i class="fas fa-envelope"></i> Email Request
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stake DuxCoin Modal -->
+    <div id="stakeModal" class="modal wallet-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-chart-line"></i> Stake DuxCoin</h2>
+                <span class="close" onclick="closeStakeModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="staking-info">
+                    <div class="staking-rewards">
+                        <h3>Staking Rewards</h3>
+                        <div class="reward-rate">
+                            <span class="rate">8.5% APY</span>
+                            <span class="period">Annual Percentage Yield</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <form id="stakeForm" onsubmit="stakeDuxCoin(event)">
+                    <div class="form-group">
+                        <label for="stakeAmount">Amount to Stake</label>
+                        <div class="amount-input">
+                            <input type="number" id="stakeAmount" step="0.00000001" min="1" placeholder="0.00000000" required>
+                            <span class="currency-label">DUX</span>
+                            <button type="button" class="btn-max" onclick="setMaxStakeAmount()">MAX</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="stakeDuration">Staking Duration</label>
+                        <select id="stakeDuration">
+                            <option value="30">30 Days (6.5% APY)</option>
+                            <option value="90">90 Days (7.5% APY)</option>
+                            <option value="180">180 Days (8.5% APY)</option>
+                            <option value="365">365 Days (10.0% APY)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="staking-summary">
+                        <div class="summary-row">
+                            <span>Staking Amount:</span>
+                            <span id="stakingSummaryAmount">0.00000000 DUX</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Duration:</span>
+                            <span id="stakingSummaryDuration">180 Days</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Estimated Rewards:</span>
+                            <span id="stakingSummaryRewards">0.00000000 DUX</span>
+                        </div>
+                        <div class="summary-row total">
+                            <span>Total Return:</span>
+                            <span id="stakingSummaryTotal">0.00000000 DUX</span>
+                        </div>
+                    </div>
+                    
+                    <div class="staking-warning">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Your staked DuxCoin will be locked for the selected duration and cannot be withdrawn early.</span>
+                    </div>
+                    
+                    <div id="stakeStatus" class="status-message"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn secondary" onclick="closeStakeModal()">Cancel</button>
+                <button type="submit" form="stakeForm" class="btn primary">
+                    <i class="fas fa-chart-line"></i> Start Staking
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/script-enhanced.js"></script>
 </body>
 </html> 

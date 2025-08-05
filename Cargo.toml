@@ -3,6 +3,14 @@ name = "duxnet"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "duxnet"
+path = "src/lib.rs"
+
+[[bin]]
+name = "duxnet"
+path = "src/main.rs"
+
 [dependencies]
 tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
@@ -20,10 +28,16 @@ tower-http = { version = "0.5", features = ["cors", "fs"] }
 tracing = "0.1"
 tracing-subscriber = "0.3"
 anyhow = "1.0"
+sys-info = "0.9"
 thiserror = "1.0"
 async-trait = "0.1"
 futures = "0.3"
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
+serde_yaml = "0.9"
+jsonschema = "0.17"
+bollard = { version = "0.14", default-features = false }
+chrono = { version = "0.4.41", features = ["serde"] }
+bytes = "1.10.1"
 
 [dev-dependencies]
 tokio-test = "0.4"

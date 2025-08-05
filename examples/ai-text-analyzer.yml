@@ -1,0 +1,76 @@
+# Example AI Text Analysis Service
+name: "ai-text-analyzer"
+version: "1.0.0"
+description: "Advanced AI text analysis with sentiment, entities, and summarization capabilities"
+category: "ai"
+tags: ["nlp", "sentiment", "entities", "ai", "text-analysis"]
+
+author:
+  name: "DuxNet AI Lab"
+  did: "did:dux:zQ3shwQPhT8p3Qd7h6QB8hkVxJ9EJ2nJ7KGGMHSqN8vP1R6Mm"
+  email: "ai-lab@duxnet.dev"
+  contact: "support@duxnet.dev"
+
+# Container specification
+container:
+  image: "duxnet/ai-text-analyzer:1.0.0"
+  ports: [8080, 9090]
+  env:
+    MODEL_PATH: "/models/bert-large"
+    API_PORT: "8080"
+    METRICS_PORT: "9090"
+    LOG_LEVEL: "info"
+  resources:
+    cpu: "1000m"
+    memory: "2Gi"
+    gpu: "1x nvidia-tesla-t4"
+
+# API definition
+api:
+  openapi: "3.1.0"
+  base_path: "/api/v1"
+  endpoints:
+    - path: "/analyze"
+      method: "POST"
+      description: "Complete text analysis including sentiment, entities, and summary"
+      pricing:
+        model: "per-call"
+        amount: 0.05
+        currency: "DUX"
+    - path: "/sentiment"
+      method: "POST"
+      description: "Sentiment analysis only (faster, cheaper)"
+      pricing:
+        model: "per-call"
+        amount: 0.01
+        currency: "DUX"
+    - path: "/entities"
+      method: "POST"
+      description: "Named entity recognition"
+      pricing:
+        model: "per-call"
+        amount: 0.02
+        currency: "DUX"
+    - path: "/summarize"
+      method: "POST"
+      description: "Text summarization"
+      pricing:
+        model: "per-call"
+        amount: 0.03
+        currency: "DUX"
+
+# Pricing model for the service
+pricing: "per-call"
+
+# Service Level Agreement
+sla:
+  uptime: 99.5
+  response_time_ms: 500
+  throughput_rps: 100
+
+# Reputation (auto-updated by the system)
+reputation:
+  score: 4.8
+  total_calls: 15234
+  reviews: 89
+  uptime_actual: 99.8

@@ -195,10 +195,19 @@ impl MessagingSystem {
     }
 
     async fn notify_handlers(&self, message: &Message) -> Result<()> {
-        let handlers = self.message_handlers.read().await;
-        for handler in handlers.iter() {
-            if let Err(e) = handler.handle_message(message).await {
-                warn!("Message handler error: {}", e);
+        // Get handlers count to avoid cloning heavy objects
+        let handlers_count = {
+            let handlers_guard = self.message_handlers.read().await;
+            handlers_guard.len()
+        };
+        
+        // Process handlers one by one to avoid cloning
+        for i in 0..handlers_count {
+            let handlers_guard = self.message_handlers.read().await;
+            if let Some(handler) = handlers_guard.get(i) {
+                if let Err(e) = handler.handle_message(message).await {
+                    warn!("Message handler error: {}", e);
+                }
             }
         }
         Ok(())

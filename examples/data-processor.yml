@@ -1,0 +1,61 @@
+# Example Simple Data Processing Service
+name: "data-processor"
+version: "2.1.0"
+description: "High-performance data processing, transformation, and analytics service"
+category: "data"
+tags: ["data", "processing", "analytics", "etl", "csv", "json"]
+
+author:
+  name: "DataFlow Solutions"
+  did: "did:dux:abc123def456ghi789jkl012mno345pqr678stu901vwx234yz"
+  email: "team@dataflow.dux"
+
+container:
+  image: "dataflow/processor:2.1.0"
+  ports: [3000]
+  env:
+    PORT: "3000"
+    MAX_WORKERS: "4"
+    CACHE_SIZE: "1GB"
+  resources:
+    cpu: "2000m"
+    memory: "4Gi"
+
+api:
+  openapi: "3.0.0"
+  base_path: "/data"
+  endpoints:
+    - path: "/process/csv"
+      method: "POST"
+      description: "Process and transform CSV data"
+      pricing:
+        model: "per-call"
+        amount: 0.10
+        currency: "DUX"
+    - path: "/process/json"
+      method: "POST"
+      description: "Process and transform JSON data"
+      pricing:
+        model: "per-call"
+        amount: 0.08
+        currency: "DUX"
+    - path: "/analytics"
+      method: "POST"
+      description: "Generate analytics and insights from data"
+      pricing:
+        model: "per-call"
+        amount: 0.25
+        currency: "DUX"
+
+pricing: "per-call"
+
+sla:
+  uptime: 99.9
+  response_time_ms: 200
+  throughput_rps: 50
+
+reputation:
+  score: 4.9
+  total_calls: 89234
+  reviews: 156
+  uptime_actual: 99.95
