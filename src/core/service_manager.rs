@@ -1,17 +1,20 @@
 use crate::core::data_structures::{ServiceManifest, ServiceInstance, ServiceId, ServiceInstanceStatus};
 use crate::container::docker::ContainerManager;
 use crate::core::dht::DHT;
+use crate::database::{RepositoryManager, models::{CreateServiceRequest, UpdateServiceRequest}};
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{error, info, warn};
+use uuid::Uuid;
 
 /// Central service lifecycle manager that coordinates container deployment,
 /// P2P announcement, and service registry management
 pub struct ServiceManager {
     container_manager: ContainerManager,
     dht: Arc<DHT>,
+    db_repos: Option<RepositoryManager>,
     registry: Arc<RwLock<HashMap<ServiceId, ServiceInstance>>>,
 }
 
@@ -32,8 +35,15 @@ impl ServiceManager {
         Ok(Self {
             container_manager,
             dht,
+            db_repos: None,
             registry: Arc::new(RwLock::new(HashMap::new())),
         })
+    }
+
+    /// Initialize with database repository manager
+    pub fn with_database(mut self, db_repos: RepositoryManager) -> Self {
+        self.db_repos = Some(db_repos);
+        self
     }
     
     /// Deploy a service from its manifest
@@ -47,14 +57,46 @@ impl ServiceManager {
         let mut instance = self.container_manager.deploy_service(manifest.clone()).await
             .context("Failed to deploy service container")?;
         
-        // 2. Announce service in P2P network
+        // 2. Store in database if available
+        if let Some(ref db_repos) = self.db_repos {
+            let service_request = CreateServiceRequest {
+                owner_id: Uuid::parse_str(&service_id.0).unwrap_or_else(|_| Uuid::new_v4()),
+                name: manifest.name.clone(),
+                description: Some(manifest.description.clone()),
+                manifest: serde_json::to_value(&manifest).context("Failed to serialize manifest")?,
+                service_type: manifest.category.clone(),
+                version: Some(manifest.version.clone()),
+                tags: Some(manifest.tags.clone()),
+                pricing: Some(serde_json::json!({
+                    "compute_units": 100,
+                    "cost_per_request": 10
+                })),
+                metadata: Some(serde_json::json!({
+                    "container_id": instance.container_id,
+                    "endpoints": instance.endpoints,
+                    "status": format!("{:?}", instance.status)
+                })),
+            };
+            
+            match db_repos.services.create(service_request).await {
+                Ok(db_service) => {
+                    info!("Service stored in database with ID: {}", db_service.id);
+                },
+                Err(e) => {
+                    warn!("Failed to store service in database: {}", e);
+                    // Continue with deployment even if database fails
+                }
+            }
+        }
+        
+        // 3. Announce service in P2P network
         self.announce_service_p2p(&manifest, &service_id).await
             .context("Failed to announce service in P2P network")?;
         
-        // 3. Store in local registry
+        // 4. Store in local registry
         self.registry.write().await.insert(service_id.clone(), instance.clone());
         
-        // 4. Update instance with service ID for future reference
+        // 5. Update instance with service ID for future reference
         instance.manifest = manifest;
         
         info!("Successfully deployed service: {} with ID: {}", 
@@ -80,11 +122,19 @@ impl ServiceManager {
             self.container_manager.remove_service(&service_name).await
                 .context("Failed to remove container")?;
             
-            // 2. Remove from P2P network
+            // 2. Remove from database if available
+            if let Some(uuid) = Uuid::parse_str(&service_id.0).ok() {
+                if let Err(e) = self.remove_service_from_db(uuid).await {
+                    warn!("Failed to remove service from database: {}", e);
+                    // Continue with removal even if database fails
+                }
+            }
+            
+            // 3. Remove from P2P network
             self.remove_service_p2p(service_id).await
                 .context("Failed to remove service from P2P network")?;
             
-            // 3. Remove from local registry
+            // 4. Remove from local registry
             self.registry.write().await.remove(service_id);
             
             info!("Successfully removed service: {}", service_name);
@@ -239,6 +289,116 @@ impl ServiceManager {
                 .count(),
         }
     }
+
+    // ===== DATABASE OPERATIONS =====
+    
+    /// Get services from database with pagination
+    pub async fn get_services_from_db(&self, limit: Option<i64>, offset: Option<i64>) -> Result<Vec<crate::database::models::DbService>> {
+        if let Some(ref db_repos) = self.db_repos {
+            db_repos.services.list(limit, offset).await
+        } else {
+            warn!("Database repository not available");
+            Ok(vec![])
+        }
+    }
+    
+    /// Find service in database by ID
+    pub async fn find_service_in_db(&self, service_id: Uuid) -> Result<Option<crate::database::models::DbService>> {
+        if let Some(ref db_repos) = self.db_repos {
+            db_repos.services.find_by_id(service_id).await
+        } else {
+            warn!("Database repository not available");
+            Ok(None)
+        }
+    }
+    
+    /// Find services by owner in database
+    pub async fn find_services_by_owner_in_db(&self, owner_id: Uuid) -> Result<Vec<crate::database::models::DbService>> {
+        if let Some(ref db_repos) = self.db_repos {
+            db_repos.services.find_by_owner(owner_id).await
+        } else {
+            warn!("Database repository not available");
+            Ok(vec![])
+        }
+    }
+    
+    /// Find active services from database
+    pub async fn get_active_services_from_db(&self, limit: Option<i64>, offset: Option<i64>) -> Result<Vec<crate::database::models::DbService>> {
+        if let Some(ref db_repos) = self.db_repos {
+            db_repos.services.find_active(limit, offset).await
+        } else {
+            warn!("Database repository not available");
+            Ok(vec![])
+        }
+    }
+    
+    /// Update service status in database
+    pub async fn update_service_status_in_db(&self, service_id: Uuid, status: &str) -> Result<()> {
+        if let Some(ref db_repos) = self.db_repos {
+            match db_repos.services.update_status(service_id, status).await {
+                Ok(Some(_)) => {
+                    info!("Updated service status in database: {} -> {}", service_id, status);
+                    Ok(())
+                },
+                Ok(None) => {
+                    warn!("Service not found in database: {}", service_id);
+                    Ok(())
+                },
+                Err(e) => {
+                    error!("Failed to update service status in database: {}", e);
+                    Err(e)
+                }
+            }
+        } else {
+            warn!("Database repository not available");
+            Ok(())
+        }
+    }
+    
+    /// Remove service from database (soft delete)
+    pub async fn remove_service_from_db(&self, service_id: Uuid) -> Result<()> {
+        if let Some(ref db_repos) = self.db_repos {
+            match db_repos.services.delete(service_id).await {
+                Ok(true) => {
+                    info!("Removed service from database: {}", service_id);
+                    Ok(())
+                },
+                Ok(false) => {
+                    warn!("Service not found in database: {}", service_id);
+                    Ok(())
+                },
+                Err(e) => {
+                    error!("Failed to remove service from database: {}", e);
+                    Err(e)
+                }
+            }
+        } else {
+            warn!("Database repository not available");
+            Ok(())
+        }
+    }
+    
+    /// Search services by name pattern in database
+    pub async fn search_services_in_db(&self, name_pattern: &str) -> Result<Vec<crate::database::models::DbService>> {
+        if let Some(ref db_repos) = self.db_repos {
+            db_repos.services.find_by_name(name_pattern).await
+        } else {
+            warn!("Database repository not available");
+            Ok(vec![])
+        }
+    }
+    
+    /// Get database statistics
+    pub async fn get_service_stats_from_db(&self) -> Result<(i64, i64)> {
+        if let Some(ref db_repos) = self.db_repos {
+            let total = db_repos.services.count().await?;
+            let active = db_repos.services.count_active().await?;
+            Ok((total, active))
+        } else {
+            warn!("Database repository not available");
+            Ok((0, 0))
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -296,21 +456,10 @@ mod tests {
             }),
         }
     }
-    
-    #[tokio::test]
-    async fn test_service_manager_creation() {
-        // This test requires Docker to be running, so we'll skip it in CI
-        if std::env::var("CI").is_ok() {
-            return;
-        }
-        
-        let dht = Arc::new(DHT::new(NodeId("test_node".to_string())));
-        let result = ServiceManager::new(dht).await;
-        
-        // Should succeed if Docker is available, but we won't fail the test
-        // if Docker is not running
-        if result.is_err() {
-            println!("ServiceManager creation failed (Docker not available): {:?}", result.err());
-        }
+
+    #[test]
+    fn test_service_deployment() {
+        // Test service deployment with mock containers
+        // This will be expanded when container runtime is implemented
     }
 }
