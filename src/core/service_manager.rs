@@ -1,7 +1,8 @@
 use crate::core::data_structures::{ServiceManifest, ServiceInstance, ServiceId, ServiceInstanceStatus};
 use crate::container::docker::ContainerManager;
 use crate::core::dht::DHT;
-use crate::database::{RepositoryManager, models::{CreateServiceRequest, UpdateServiceRequest}};
+use crate::database::{RepositoryManager, models::{CreateServiceRequest, UpdateServiceRequest, DbService}};
+use crate::database::models;
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -293,7 +294,7 @@ impl ServiceManager {
     // ===== DATABASE OPERATIONS =====
     
     /// Get services from database with pagination
-    pub async fn get_services_from_db(&self, limit: Option<i64>, offset: Option<i64>) -> Result<Vec<crate::database::models::DbService>> {
+    pub async fn get_services_from_db(&self, limit: Option<i64>, offset: Option<i64>) -> Result<Vec<models::DbService>> {
         if let Some(ref db_repos) = self.db_repos {
             db_repos.services.list(limit, offset).await
         } else {
@@ -303,7 +304,7 @@ impl ServiceManager {
     }
     
     /// Find service in database by ID
-    pub async fn find_service_in_db(&self, service_id: Uuid) -> Result<Option<crate::database::models::DbService>> {
+    pub async fn find_service_in_db(&self, service_id: Uuid) -> Result<Option<models::DbService>> {
         if let Some(ref db_repos) = self.db_repos {
             db_repos.services.find_by_id(service_id).await
         } else {
@@ -313,7 +314,7 @@ impl ServiceManager {
     }
     
     /// Find services by owner in database
-    pub async fn find_services_by_owner_in_db(&self, owner_id: Uuid) -> Result<Vec<crate::database::models::DbService>> {
+    pub async fn find_services_by_owner_in_db(&self, owner_id: Uuid) -> Result<Vec<models::DbService>> {
         if let Some(ref db_repos) = self.db_repos {
             db_repos.services.find_by_owner(owner_id).await
         } else {
@@ -323,7 +324,7 @@ impl ServiceManager {
     }
     
     /// Find active services from database
-    pub async fn get_active_services_from_db(&self, limit: Option<i64>, offset: Option<i64>) -> Result<Vec<crate::database::models::DbService>> {
+    pub async fn get_active_services_from_db(&self, limit: Option<i64>, offset: Option<i64>) -> Result<Vec<models::DbService>> {
         if let Some(ref db_repos) = self.db_repos {
             db_repos.services.find_active(limit, offset).await
         } else {
@@ -379,7 +380,7 @@ impl ServiceManager {
     }
     
     /// Search services by name pattern in database
-    pub async fn search_services_in_db(&self, name_pattern: &str) -> Result<Vec<crate::database::models::DbService>> {
+    pub async fn search_services_in_db(&self, name_pattern: &str) -> Result<Vec<models::DbService>> {
         if let Some(ref db_repos) = self.db_repos {
             db_repos.services.find_by_name(name_pattern).await
         } else {

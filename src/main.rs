@@ -6,6 +6,7 @@ mod container;
 mod network;
 mod gateway;
 mod config;
+mod database;
 
 use anyhow::Result;
 use tracing::{info, error, warn};

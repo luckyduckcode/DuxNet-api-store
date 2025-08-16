@@ -3,11 +3,13 @@
 mod user_repository;
 mod service_repository;
 mod transaction_repository;
+mod reputation_repository;
 
 // Re-export repository structs (all enabled)
 pub use user_repository::UserRepository;
 pub use service_repository::ServiceRepository;
 pub use transaction_repository::TransactionRepository;
+pub use reputation_repository::ReputationRepository;
 
 use anyhow::Result;
 use sqlx::PgPool;
@@ -30,6 +32,7 @@ pub struct RepositoryManager {
     pub users: UserRepository,
     pub services: ServiceRepository,
     pub transactions: TransactionRepository,
+    pub reputation: ReputationRepository,
 }
 
 impl RepositoryManager {
@@ -39,6 +42,7 @@ impl RepositoryManager {
             users: UserRepository::new(pool.clone()),
             services: ServiceRepository::new(pool.clone()),
             transactions: TransactionRepository::new(pool.clone()),
+            reputation: ReputationRepository::new(pool.clone()),
             pool,
         }
     }
