@@ -8,6 +8,11 @@ pub struct ProductionConfig {
     pub port: u16,
     pub environment: String,
     
+    // Database configuration
+    pub database_url: String,
+    pub database_max_connections: u32,
+    pub database_ssl_mode: String,
+    
     // DuxCoin configuration
     pub duxcoin_rpc_url: String,
     pub duxcoin_rpc_user: String,
@@ -55,6 +60,16 @@ impl ProductionConfig {
                 .parse()
                 .map_err(|_| "Invalid DUXNET_PORT")?,
             environment: env::var("DUXNET_ENV").unwrap_or_else(|_| "development".to_string()),
+            
+            // Database configuration
+            database_url: env::var("DATABASE_URL")
+                .unwrap_or_else(|_| "postgresql://duxnet:duxnet_dev_password@localhost:5432/duxnet_development".to_string()),
+            database_max_connections: env::var("DATABASE_MAX_CONNECTIONS")
+                .unwrap_or_else(|_| "20".to_string())
+                .parse()
+                .map_err(|_| "Invalid DATABASE_MAX_CONNECTIONS")?,
+            database_ssl_mode: env::var("DATABASE_SSL_MODE")
+                .unwrap_or_else(|_| "prefer".to_string()),
             
             // DuxCoin configuration
             duxcoin_rpc_url: env::var("DUXCOIN_RPC_URL")

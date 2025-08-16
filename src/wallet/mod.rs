@@ -118,6 +118,23 @@ impl std::fmt::Display for Currency {
     }
 }
 
+impl std::str::FromStr for Currency {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_uppercase().as_str() {
+            "BTC" => Ok(Currency::BTC),
+            "ETH" => Ok(Currency::ETH),
+            "USDC" => Ok(Currency::USDC),
+            "LTC" => Ok(Currency::LTC),
+            "XMR" => Ok(Currency::XMR),
+            "DOGE" => Ok(Currency::DOGE),
+            "DUX" => Ok(Currency::DUX),
+            _ => Err(format!("Unknown currency: {}", s)),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Wallet {
     pub did: String,

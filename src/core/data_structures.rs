@@ -127,6 +127,35 @@ impl ServiceId {
     }
 }
 
+/// User representation in the DuxNet system
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct User {
+    pub id: String,
+    pub username: String,
+    pub display_name: Option<String>,
+    pub email: Option<String>,
+    pub wallet_address: Option<String>,
+    pub public_key: Option<String>,
+    pub reputation_score: f64,
+    pub total_earnings: i64,
+    pub total_spent: i64,
+    pub service_count: i32,
+    pub rating: f64,
+    pub metadata: serde_json::Value,
+    pub is_active: bool,
+    pub created_at: i64,
+}
+
+/// Service representation in the DuxNet system
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Service {
+    pub id: String,
+    pub manifest: ServiceManifest,
+    pub owner: String,
+    pub status: String,
+    pub created_at: i64,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct TaskId(pub String);
 

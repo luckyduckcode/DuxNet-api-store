@@ -7,6 +7,7 @@ pub mod frontend;
 pub mod gateway;
 pub mod config;
 pub mod monitoring;
+pub mod database;
 
 #[cfg(test)]
 mod tests {
